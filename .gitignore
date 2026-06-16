@@ -1,0 +1,16 @@
+# Godot generated files
+.godot/
+
+# Builds and exports
+builds/*
+!builds/.gdignore
+exports/
+test-results/
+
+# Local editor and OS files
+.vscode/
+.idea/
+*.tmp
+*.log
+Thumbs.db
+Desktop.ini
