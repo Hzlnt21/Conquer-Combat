@@ -29,8 +29,11 @@ const DASH_FRAMES := 10
 const BACKDASH_FRAMES := 12
 const INPUT_BUFFER_FRAMES := 5
 const KNOCKDOWN_FRAMES := 72
+const MEMORY_MARK_DURATION := 300
+const EMOTIONAL_ECHO_DURATION := 360
 
 var fighter_id: StringName
+var character_id: StringName
 var state := State.IDLE
 var state_frame := 0
 var position := Vector2i.ZERO
@@ -39,6 +42,14 @@ var facing := 1
 var health := 1000
 var is_dummy := false
 var rounds_won := 0
+var walk_forward_speed := WALK_FORWARD_SPEED
+var walk_back_speed := WALK_BACK_SPEED
+var dash_speed := DASH_SPEED
+var backdash_speed := BACKDASH_SPEED
+
+var memory_mark_frames := 0
+var emotional_echo_tokens := 0
+var emotional_echo_frames := 0
 
 var current_move: MoveDefinition
 var move_frame := 0
@@ -47,10 +58,16 @@ var buffered_attack: StringName
 var buffer_frames := 0
 
 
-func _init(id: StringName, start_position: Vector2i, dummy := false) -> void:
+func _init(id: StringName, start_position: Vector2i, character: StringName = &"izuna", dummy := false) -> void:
 	fighter_id = id
+	character_id = character
 	position = start_position
 	is_dummy = dummy
+	if character_id == &"xenon":
+		walk_forward_speed = 4 * UNITS_PER_PIXEL
+		walk_back_speed = 3 * UNITS_PER_PIXEL
+		dash_speed = 10 * UNITS_PER_PIXEL
+		backdash_speed = 9 * UNITS_PER_PIXEL
 
 
 func queue_attack(action: StringName) -> void:
@@ -85,6 +102,7 @@ func receive_hit(move: MoveDefinition, attacker_facing: int) -> void:
 		state_frame = move.hitstun
 	elif state == State.KNOCKDOWN:
 		state_frame = KNOCKDOWN_FRAMES
+		clear_character_mechanic()
 
 
 func receive_block(move: MoveDefinition, attacker_facing: int) -> void:
@@ -108,6 +126,35 @@ func reset_for_round(start_position: Vector2i) -> void:
 	move_has_hit = false
 	buffered_attack = &""
 	buffer_frames = 0
+	clear_character_mechanic()
+
+
+func apply_memory_mark() -> void:
+	if character_id != &"izuna":
+		return
+	memory_mark_frames = MEMORY_MARK_DURATION
+
+
+func grant_emotional_echo() -> void:
+	if character_id != &"xenon":
+		return
+	emotional_echo_tokens = 1
+	emotional_echo_frames = EMOTIONAL_ECHO_DURATION
+
+
+func tick_character_mechanic() -> void:
+	if memory_mark_frames > 0:
+		memory_mark_frames -= 1
+	if emotional_echo_frames > 0:
+		emotional_echo_frames -= 1
+		if emotional_echo_frames == 0:
+			emotional_echo_tokens = 0
+
+
+func clear_character_mechanic() -> void:
+	memory_mark_frames = 0
+	emotional_echo_tokens = 0
+	emotional_echo_frames = 0
 
 
 func body_rect() -> Rect2i:

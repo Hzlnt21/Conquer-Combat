@@ -373,3 +373,13 @@ Yang masih tersisa sebelum v0.1a dianggap gameplay-complete:
 - Simultaneous-hit resolution yang mendukung double KO.
 - Web QA untuk input dan damage dari kedua pemain.
 - Visual-development gate dibuka untuk silhouette Izuna.
+
+### v0.1c character contrast foundation
+
+- Roster prototype sekarang menggunakan Izuna untuk P1 dan Xenon untuk P2.
+- Setiap karakter memiliki normal move data dan movement profile terpisah.
+- Izuna Heavy menerapkan state Memory Mark dengan expiry 300 simulation frames.
+- Xenon Medium memperoleh Emotional Echo ketika diblok atau mengenai counter-hit.
+- Memory Mark dan Emotional Echo dibersihkan saat pemiliknya terkena knockdown.
+- Presentation placeholder menampilkan identity serta debug state kedua mechanic.
+- Specials, Recall, Puppet activation, dan combo routes masih menjadi pekerjaan berikutnya.

@@ -13,7 +13,7 @@ func _draw() -> void:
 
 	_draw_stage()
 	_draw_fighter(simulation.player, Color("f2eee8"), Color("df334f"), "P1 IZUNA")
-	_draw_fighter(simulation.dummy, Color("d8d1df"), Color("a54cc8"), "P2 IZUNA")
+	_draw_fighter(simulation.dummy, Color("d8d1df"), Color("a54cc8"), "P2 XENON")
 	_draw_health()
 	_draw_match_status()
 	_draw_debug_text()
@@ -68,7 +68,7 @@ func _draw_health() -> void:
 	var dummy_width := right_bar.size.x * simulation.dummy.health / 1000.0
 	draw_rect(Rect2(right_bar.end.x - dummy_width, right_bar.position.y, dummy_width, right_bar.size.y), Color("b84fce"))
 	draw_string(ThemeDB.fallback_font, Vector2(64, 46), "P1 IZUNA", HORIZONTAL_ALIGNMENT_LEFT, -1, 18, Color.WHITE)
-	draw_string(ThemeDB.fallback_font, Vector2(size.x - 534, 46), "P2 IZUNA", HORIZONTAL_ALIGNMENT_RIGHT, 470, 18, Color.WHITE)
+	draw_string(ThemeDB.fallback_font, Vector2(size.x - 534, 46), "P2 XENON", HORIZONTAL_ALIGNMENT_RIGHT, 470, 18, Color.WHITE)
 
 	for index in simulation.player.rounds_won:
 		draw_circle(Vector2(76 + index * 22, 94), 7, Color("df334f"))
@@ -108,6 +108,7 @@ func _draw_debug_text() -> void:
 		"P1 %s f%d | %s f%d | HP %d" % [FighterSimulation.State.keys()[player_one.state], player_one.state_frame, move_name_one, player_one.move_frame, player_one.health],
 		"P2 %s f%d | %s f%d | HP %d" % [FighterSimulation.State.keys()[player_two.state], player_two.state_frame, move_name_two, player_two.move_frame, player_two.health],
 		"P1 POS %d,%d | P2 POS %d,%d" % [player_one.position.x / 1000, player_one.position.y / 1000, player_two.position.x / 1000, player_two.position.y / 1000],
+		"MEMORY %d | ECHO %d (%d)" % [player_one.memory_mark_frames, player_two.emotional_echo_tokens, player_two.emotional_echo_frames],
 	]
 	for index in lines.size():
 		draw_string(ThemeDB.fallback_font, Vector2(24, 642 + index * 15), lines[index], HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color("c9bdcf"))

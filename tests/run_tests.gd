@@ -15,6 +15,11 @@ func _init() -> void:
 	_test_timeout_uses_remaining_health()
 	_test_simultaneous_hit_can_double_ko()
 	_test_reset_restores_match_state()
+	_test_roster_uses_distinct_characters()
+	_test_izuna_heavy_applies_memory_mark()
+	_test_knockdown_clears_character_mechanic()
+	_test_xenon_medium_block_grants_echo()
+	_test_character_mechanics_expire()
 
 	if failures == 0:
 		print("PASS: %d assertions" % assertions)
@@ -75,9 +80,9 @@ func _test_player_two_can_attack() -> void:
 	var player_two_attack := FrameInput.new()
 	player_two_attack.light_pressed = true
 	simulation.tick(FrameInput.new(), player_two_attack)
-	for _index in range(5):
+	for _index in range(6):
 		simulation.tick(FrameInput.new(), FrameInput.new())
-	_expect(simulation.player.health == 960, "Player two attack damages player one")
+	_expect(simulation.player.health == 965, "Xenon light uses character-specific damage")
 
 
 func _test_holding_away_blocks() -> void:
@@ -140,13 +145,14 @@ func _test_simultaneous_hit_can_double_ko() -> void:
 	var simulation := CombatSimulation.new()
 	simulation.player.position.x = 500 * CombatSimulation.UNITS_PER_PIXEL
 	simulation.dummy.position.x = 576 * CombatSimulation.UNITS_PER_PIXEL
-	simulation.player.health = 40
-	simulation.dummy.health = 40
+	simulation.player.health = 35
+	simulation.dummy.health = 35
 	var player_one_attack := FrameInput.new()
 	var player_two_attack := FrameInput.new()
-	player_one_attack.light_pressed = true
 	player_two_attack.light_pressed = true
-	simulation.tick(player_one_attack, player_two_attack)
+	simulation.tick(FrameInput.new(), player_two_attack)
+	player_one_attack.light_pressed = true
+	simulation.tick(player_one_attack, FrameInput.new())
 	for _index in range(5):
 		simulation.tick(FrameInput.new(), FrameInput.new())
 	_expect(simulation.player.health == 0 and simulation.dummy.health == 0, "Simultaneous active hits can double KO")
@@ -161,6 +167,67 @@ func _test_reset_restores_match_state() -> void:
 	_expect(simulation.frame == 0, "Reset clears frame counter")
 	_expect(simulation.dummy.health == 1000, "Reset restores dummy health")
 	_expect(simulation.player.position.x < simulation.dummy.position.x, "Reset restores starting positions")
+
+
+func _test_roster_uses_distinct_characters() -> void:
+	var simulation := CombatSimulation.new()
+	_expect(simulation.player.character_id == &"izuna", "Player one uses Izuna character data")
+	_expect(simulation.dummy.character_id == &"xenon", "Player two uses Xenon character data")
+	_expect(simulation.player.walk_forward_speed > simulation.dummy.walk_forward_speed, "Izuna walks forward faster than Xenon")
+
+
+func _test_izuna_heavy_applies_memory_mark() -> void:
+	var simulation := CombatSimulation.new()
+	simulation.player.position.x = 350 * CombatSimulation.UNITS_PER_PIXEL
+	simulation.dummy.position.x = 480 * CombatSimulation.UNITS_PER_PIXEL
+	var attack := FrameInput.new()
+	attack.heavy_pressed = true
+	simulation.tick(attack)
+	for _index in range(14):
+		simulation.tick(FrameInput.new(), FrameInput.new())
+	_expect(simulation.player.memory_mark_frames == FighterSimulation.MEMORY_MARK_DURATION, "Izuna heavy applies a full Memory Mark")
+
+
+func _test_knockdown_clears_character_mechanic() -> void:
+	var simulation := CombatSimulation.new()
+	simulation.player.apply_memory_mark()
+	simulation.player.position.x = 700 * CombatSimulation.UNITS_PER_PIXEL
+	simulation.dummy.position.x = 830 * CombatSimulation.UNITS_PER_PIXEL
+	var attack := FrameInput.new()
+	attack.heavy_pressed = true
+	simulation.tick(FrameInput.new(), attack)
+	for _index in range(16):
+		simulation.tick(FrameInput.new(), FrameInput.new())
+	_expect(simulation.player.state == FighterSimulation.State.KNOCKDOWN, "Xenon heavy knocks Izuna down")
+	_expect(simulation.player.memory_mark_frames == 0, "Knockdown clears Izuna Memory Mark")
+
+
+func _test_xenon_medium_block_grants_echo() -> void:
+	var simulation := CombatSimulation.new()
+	simulation.player.position.x = 690 * CombatSimulation.UNITS_PER_PIXEL
+	simulation.dummy.position.x = 830 * CombatSimulation.UNITS_PER_PIXEL
+	var block := FrameInput.new()
+	block.left = true
+	var attack := FrameInput.new()
+	attack.medium_pressed = true
+	simulation.tick(block, attack)
+	for _index in range(10):
+		simulation.tick(block, FrameInput.new())
+	_expect(simulation.player.health == 1000, "Izuna blocks Xenon medium")
+	_expect(simulation.dummy.emotional_echo_tokens == 1, "Blocked Xenon medium grants Emotional Echo")
+	_expect(simulation.dummy.emotional_echo_frames == FighterSimulation.EMOTIONAL_ECHO_DURATION, "Emotional Echo starts at full duration")
+
+
+func _test_character_mechanics_expire() -> void:
+	var izuna := FighterSimulation.new(&"izuna_test", Vector2i.ZERO, &"izuna")
+	var xenon := FighterSimulation.new(&"xenon_test", Vector2i.ZERO, &"xenon")
+	izuna.apply_memory_mark()
+	xenon.grant_emotional_echo()
+	for _index in range(FighterSimulation.EMOTIONAL_ECHO_DURATION):
+		izuna.tick_character_mechanic()
+		xenon.tick_character_mechanic()
+	_expect(izuna.memory_mark_frames == 0, "Memory Mark expires after its duration")
+	_expect(xenon.emotional_echo_tokens == 0, "Emotional Echo token expires after its duration")
 
 
 func _expect(condition: bool, message: String) -> void:

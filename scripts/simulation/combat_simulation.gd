@@ -18,7 +18,7 @@ var frame := 0
 var hitstop_frames := 0
 var player: FighterSimulation
 var dummy: FighterSimulation
-var moves: Dictionary[StringName, MoveDefinition] = {}
+var move_sets: Dictionary[StringName, Dictionary] = {}
 var events: Array[Dictionary] = []
 var match_state := MatchState.FIGHTING
 var round_number := 1
@@ -28,9 +28,16 @@ var round_winner := 0
 
 
 func _init() -> void:
-	moves[&"light"] = MoveDefinition.new(&"light", 5, 3, 10, 40, 5, 12, 72, 118, 2)
-	moves[&"medium"] = MoveDefinition.new(&"medium", 9, 4, 15, 70, 7, 17, 108, 132, 4)
-	moves[&"heavy"] = MoveDefinition.new(&"heavy", 14, 5, 22, 110, 9, 24, 148, 150, 8, true)
+	move_sets[&"izuna"] = {
+		&"light": MoveDefinition.new(&"izuna_light", 5, 3, 10, 40, 5, 12, 72, 118, 2),
+		&"medium": MoveDefinition.new(&"izuna_medium", 9, 4, 15, 70, 7, 17, 108, 132, 4),
+		&"heavy": MoveDefinition.new(&"izuna_heavy", 14, 5, 22, 110, 9, 24, 148, 150, 8, true),
+	}
+	move_sets[&"xenon"] = {
+		&"light": MoveDefinition.new(&"xenon_light", 6, 3, 11, 35, 5, 11, 76, 116, 2),
+		&"medium": MoveDefinition.new(&"xenon_medium", 10, 4, 17, 75, 7, 18, 142, 130, 5),
+		&"heavy": MoveDefinition.new(&"xenon_heavy", 16, 5, 24, 115, 9, 25, 176, 148, 9, true),
+	}
 	reset()
 
 
@@ -43,8 +50,8 @@ func reset() -> void:
 	round_timer_frames = ROUND_TIME_FRAMES
 	round_over_frames = 0
 	round_winner = 0
-	player = FighterSimulation.new(&"izuna_p1", Vector2i(350 * UNITS_PER_PIXEL, GROUND_Y))
-	dummy = FighterSimulation.new(&"izuna_p2", Vector2i(830 * UNITS_PER_PIXEL, GROUND_Y))
+	player = FighterSimulation.new(&"izuna_p1", Vector2i(350 * UNITS_PER_PIXEL, GROUND_Y), &"izuna")
+	dummy = FighterSimulation.new(&"xenon_p2", Vector2i(830 * UNITS_PER_PIXEL, GROUND_Y), &"xenon")
 	_update_facing()
 
 
@@ -63,6 +70,8 @@ func tick(input_one: FrameInput, input_two: FrameInput = null) -> void:
 		hitstop_frames -= 1
 		return
 
+	player.tick_character_mechanic()
+	dummy.tick_character_mechanic()
 	round_timer_frames = maxi(0, round_timer_frames - 1)
 	_capture_attack_input(player, input_one)
 	_capture_attack_input(dummy, input_two)
@@ -118,7 +127,7 @@ func _tick_fighter(fighter: FighterSimulation, input: FrameInput) -> void:
 		return
 
 	if fighter.state == FighterSimulation.State.DASH:
-		fighter.position.x += fighter.facing * FighterSimulation.DASH_SPEED
+		fighter.position.x += fighter.facing * fighter.dash_speed
 		fighter.state_frame += 1
 		if fighter.state_frame >= FighterSimulation.DASH_FRAMES:
 			_set_state(fighter, FighterSimulation.State.IDLE)
@@ -126,7 +135,7 @@ func _tick_fighter(fighter: FighterSimulation, input: FrameInput) -> void:
 		return
 
 	if fighter.state == FighterSimulation.State.BACKDASH:
-		fighter.position.x -= fighter.facing * FighterSimulation.BACKDASH_SPEED
+		fighter.position.x -= fighter.facing * fighter.backdash_speed
 		fighter.state_frame += 1
 		if fighter.state_frame >= FighterSimulation.BACKDASH_FRAMES:
 			_set_state(fighter, FighterSimulation.State.IDLE)
@@ -145,7 +154,7 @@ func _tick_fighter(fighter: FighterSimulation, input: FrameInput) -> void:
 		return
 
 	if fighter.buffer_frames > 0 and fighter.can_start_attack():
-		var move: MoveDefinition = moves.get(fighter.buffered_attack)
+		var move: MoveDefinition = _move_for(fighter, fighter.buffered_attack)
 		if move != null:
 			fighter.start_move(move)
 			events.append({"type": &"attack_started", "fighter": fighter.fighter_id, "move": move.id})
@@ -172,7 +181,7 @@ func _tick_fighter(fighter: FighterSimulation, input: FrameInput) -> void:
 	var axis := input.horizontal_axis()
 	if axis != 0:
 		var moving_forward := axis == fighter.facing
-		var speed := FighterSimulation.WALK_FORWARD_SPEED if moving_forward else FighterSimulation.WALK_BACK_SPEED
+		var speed := fighter.walk_forward_speed if moving_forward else fighter.walk_back_speed
 		fighter.position.x += axis * speed
 		_set_state(fighter, FighterSimulation.State.WALK)
 	else:
@@ -202,13 +211,34 @@ func _resolve_attacks(input_one: FrameInput, input_two: FrameInput) -> void:
 
 		attacker.move_has_hit = true
 		var move: MoveDefinition = candidate.move
+		var defender_was_attacking := defender.state == FighterSimulation.State.ATTACK
 		if candidate.blocked:
 			defender.receive_block(move, attacker.facing)
 			events.append({"type": &"attack_blocked", "player": candidate.player, "move": move.id})
 		else:
 			defender.receive_hit(move, attacker.facing)
 			events.append({"type": &"hit_connected", "player": candidate.player, "move": move.id, "damage": move.damage})
+		_apply_character_mechanic(attacker, move, candidate.blocked, defender_was_attacking)
 		hitstop_frames = maxi(hitstop_frames, move.hitstop)
+
+
+func _move_for(fighter: FighterSimulation, action: StringName) -> MoveDefinition:
+	var character_moves: Dictionary = move_sets.get(fighter.character_id, {})
+	return character_moves.get(action)
+
+
+func _apply_character_mechanic(
+	attacker: FighterSimulation,
+	move: MoveDefinition,
+	was_blocked: bool,
+	was_counter_hit: bool
+) -> void:
+	if attacker.character_id == &"izuna" and move.id == &"izuna_heavy" and not was_blocked:
+		attacker.apply_memory_mark()
+		events.append({"type": &"character_mechanic_changed", "fighter": attacker.fighter_id, "mechanic": &"memory_mark", "value": 1})
+	elif attacker.character_id == &"xenon" and move.id == &"xenon_medium" and (was_blocked or was_counter_hit):
+		attacker.grant_emotional_echo()
+		events.append({"type": &"character_mechanic_changed", "fighter": attacker.fighter_id, "mechanic": &"emotional_echo", "value": attacker.emotional_echo_tokens})
 
 
 func _collect_attack_candidate(

@@ -2,15 +2,17 @@
 
 Prototype fighting game 2D untuk browser dan Windows, dibuat dengan Godot 4.6.3 Standard dan GDScript.
 
-Status saat ini: milestone v0.1b two-player proof dan visual-development gate.
+Status saat ini: milestone v0.1c character-contrast foundation dan Izuna production gate.
 
 Prototype saat ini memiliki:
 
-- Izuna mirror match untuk dua pemain.
+- Izuna versus Xenon placeholder untuk dua pemain.
 - Walk, crouch, jump, forward dash, dan backdash.
 - Light, Medium, dan Heavy dengan startup, active, serta recovery frame.
 - Pushbox, hurtbox, hitbox, hitstop, hitstun, damage, dan health bar.
 - Normal block, blockstun, knockdown, KO, timer, dan best-of-three round flow.
+- Normal attack data dan movement profile berbeda untuk Izuna dan Xenon.
+- Fondasi Memory Mark Izuna dan Emotional Echo Xenon telah berjalan di simulation.
 - Keyboard dua pemain dan basic controller mapping.
 - Debug overlay serta reset dengan tombol `R`.
 - Web export dan headless regression tests.

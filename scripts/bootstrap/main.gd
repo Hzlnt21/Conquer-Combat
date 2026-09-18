@@ -17,7 +17,7 @@ var last_tap_frame := {
 func _ready() -> void:
 	combat_view.simulation = simulation
 	phase_label.text = "P1 A/D W S J/K/L | P2 arrows 1/2/3 | hold away to block | R reset"
-	print("Conquer Combat v0.1b two-player proof loaded.")
+	print("Conquer Combat v0.1c character contrast foundation loaded.")
 
 
 func _physics_process(_delta: float) -> void:
