@@ -19,6 +19,7 @@ Prototype saat ini memiliki:
 - Turnaround empat arah Izuna dan rencana bagian Skeleton2D telah tersedia.
 - Idle key pose Izuna telah tersedia sebagai seed frame untuk redraw dan rigging.
 - Clean redraw idle Izuna dan separation map awal telah tersedia.
+- Visual scale proof Izuna pada viewport 1280x720 telah tervalidasi.
 
 ## Dokumen
 
@@ -50,6 +51,14 @@ Menjalankan simulation tests:
 ```powershell
 & 'D:\Apps\Coding Apps\Godot_v4.6.3-stable_win64.exe\Godot_v4.6.3-stable_win64_console.exe' --headless --path 'D:\Code\Experiments\Conquer-Combat' --script 'res://tests/run_tests.gd'
 ```
+
+Menjalankan visual scale proof Izuna:
+
+```powershell
+& 'D:\Apps\Coding Apps\Godot_v4.6.3-stable_win64.exe\Godot_v4.6.3-stable_win64_console.exe' --path 'D:\Code\Experiments\Conquer-Combat' --editor 'res://scenes/fighters/IzunaVisualProof.tscn'
+```
+
+Jalankan scene dengan `F6`. Tekan `F1` untuk guide dan `Space` untuk pause animasi presentation.
 
 ## Struktur Awal
 

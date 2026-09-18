@@ -1,0 +1,42 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/presentation/izuna_visual_proof.gd" id="1_script"]
+[ext_resource type="Texture2D" path="res://assets/characters/izuna/redraw/izuna-idle-clean-redraw-v01.png" id="2_texture"]
+
+[node name="IzunaVisualProof" type="Node2D"]
+script = ExtResource("1_script")
+
+[node name="Art" type="Sprite2D" parent="."]
+unique_name_in_owner = true
+texture = ExtResource("2_texture")
+region_enabled = true
+region_rect = Rect2(318, 0, 900, 1024)
+
+[node name="Title" type="Label" parent="."]
+offset_left = 24.0
+offset_top = 20.0
+offset_right = 540.0
+offset_bottom = 53.0
+theme_override_colors/font_color = Color(0.95, 0.9, 0.96, 1)
+theme_override_font_sizes/font_size = 26
+text = "IZUNA - VISUAL SCALE PROOF"
+
+[node name="Subtitle" type="Label" parent="."]
+offset_left = 26.0
+offset_top = 54.0
+offset_right = 650.0
+offset_bottom = 78.0
+theme_override_colors/font_color = Color(0.68, 0.65, 0.72, 1)
+theme_override_font_sizes/font_size = 14
+text = "Composite redraw preview at 1280x720 gameplay scale"
+
+[node name="StatusLabel" type="Label" parent="."]
+unique_name_in_owner = true
+offset_left = 768.0
+offset_top = 24.0
+offset_right = 1252.0
+offset_bottom = 49.0
+theme_override_colors/font_color = Color(0.82, 0.72, 0.75, 1)
+theme_override_font_sizes/font_size = 14
+text = "Idle presentation: PLAYING | F1 guides ON | Space pause"
+horizontal_alignment = 2
