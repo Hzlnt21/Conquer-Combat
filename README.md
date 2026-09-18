@@ -25,6 +25,7 @@ Prototype saat ini memiliki:
 - Game Design Document: `docs/GDD.md`
 - Technical Design Document: `docs/TECHNICAL_DESIGN.md`
 - Izuna Visual Brief: `docs/VISUAL_BRIEF_IZUNA.md`
+- Izuna Production Package: `docs/production/IZUNA_PRODUCTION_PACKAGE.md`
 
 ## Menjalankan Project
 

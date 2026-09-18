@@ -95,4 +95,6 @@
 
 ## Next Step
 
-Create the manual clean redraw pass with explicit closed layer shapes for Skeleton2D cutting, then prepare a transparent-body export test.
+Production package v0.1 now lives at `res://docs/production/IZUNA_PRODUCTION_PACKAGE.md`.
+
+Next execution step: create the actual manual redraw source file and export the first aligned transparent body-part set for Godot.
