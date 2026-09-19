@@ -13,6 +13,11 @@ const STAGE_RIGHT := 1200 * UNITS_PER_PIXEL
 const GROUND_Y := 590 * UNITS_PER_PIXEL
 const ROUND_TIME_FRAMES := 99 * 60
 const ROUND_OVER_FRAMES := 120
+const METER_GAIN_HIT := 180
+const METER_GAIN_BLOCK := 60
+const METER_GAIN_RECEIVED := 70
+const METER_GAIN_GUARD := 30
+const BURST_RANGE := 240 * UNITS_PER_PIXEL
 
 var frame := 0
 var hitstop_frames := 0
@@ -36,6 +41,8 @@ func _init() -> void:
 		&"special_forward": MoveDefinition.new(&"izuna_foxfire_step", 13, 5, 22, 95, 8, 22, 170, 134, 7, false, 7),
 		&"special_down": MoveDefinition.new(&"izuna_memory_break", 8, 5, 28, 90, 8, 24, 96, 190, 6, true),
 		&"throw": MoveDefinition.new(&"izuna_forgotten_oath", 6, 2, 24, 120, 7, 20, 54, 176, 5, true, 0, true),
+		&"conquer_art": MoveDefinition.new(&"izuna_sacred_recall", 10, 5, 18, 125, 10, 24, 190, 150, 8, true),
+		&"ultimate": MoveDefinition.new(&"izuna_ninefold_severance", 12, 5, 45, 360, 14, 38, 230, 176, 14, true),
 		&"recall_strike": MoveDefinition.new(&"izuna_recall_strike", 0, 3, 0, 45, 6, 16, 220, 150, 4),
 	}
 	move_sets[&"xenon"] = {
@@ -46,6 +53,8 @@ func _init() -> void:
 		&"special_forward": MoveDefinition.new(&"xenon_mocking_step", 12, 4, 24, 65, 7, 18, 150, 130, 4, false, 5),
 		&"special_down": MoveDefinition.new(&"xenon_despair_puppet", 12, 1, 20, 0, 0, 0, 0, 0, 0),
 		&"throw": MoveDefinition.new(&"xenon_shared_misery", 7, 2, 25, 125, 7, 21, 56, 176, 6, true, 0, true),
+		&"conquer_art": MoveDefinition.new(&"xenon_unmasked_chorus", 12, 1, 19, 0, 0, 0, 0, 0, 0),
+		&"ultimate": MoveDefinition.new(&"xenon_the_last_laugh", 14, 6, 44, 380, 14, 40, 250, 180, 15, true),
 		&"puppet_strike": MoveDefinition.new(&"xenon_puppet_strike", 0, 3, 0, 55, 6, 17, 120, 130, 4),
 	}
 	reset()
@@ -82,6 +91,9 @@ func tick(input_one: FrameInput, input_two: FrameInput = null) -> void:
 		hitstop_frames -= 1
 		return
 
+	_handle_resource_input(player, dummy, input_one)
+	_handle_resource_input(dummy, player, input_two)
+
 	player.tick_character_mechanic()
 	dummy.tick_character_mechanic()
 	round_timer_frames = maxi(0, round_timer_frames - 1)
@@ -112,6 +124,10 @@ func reset_training_positions() -> void:
 func refill_training_state() -> void:
 	player.health = 1000
 	dummy.health = 1000
+	player.conviction = FighterSimulation.CONVICTION_MAX
+	dummy.conviction = FighterSimulation.CONVICTION_MAX
+	player.burst_available = true
+	dummy.burst_available = true
 	player.clear_character_mechanic()
 	dummy.clear_character_mechanic()
 	round_timer_frames = ROUND_TIME_FRAMES
@@ -119,7 +135,9 @@ func refill_training_state() -> void:
 
 
 func _capture_attack_input(fighter: FighterSimulation, input: FrameInput) -> void:
-	if input.throw_pressed:
+	if input.ultimate_pressed:
+		fighter.queue_attack(&"ultimate")
+	elif input.throw_pressed:
 		fighter.queue_attack(&"throw")
 	elif input.light_pressed:
 		fighter.queue_attack(&"light")
@@ -173,6 +191,12 @@ func _tick_fighter(fighter: FighterSimulation, input: FrameInput) -> void:
 	if fighter.state == FighterSimulation.State.GUARD_RECOVERY:
 		fighter.state_frame += 1
 		if fighter.state_frame >= FighterSimulation.GUARD_RECOVERY_FRAMES:
+			_set_state(fighter, FighterSimulation.State.IDLE)
+		return
+
+	if fighter.state == FighterSimulation.State.BURST:
+		fighter.state_frame -= 1
+		if fighter.state_frame <= 0:
 			_set_state(fighter, FighterSimulation.State.IDLE)
 		return
 
@@ -310,6 +334,13 @@ func _resolve_attacks(input_one: FrameInput, input_two: FrameInput) -> void:
 				defender.velocity.x = -attacker.facing * 5 * UNITS_PER_PIXEL
 			events.append({"type": &"hit_connected", "player": candidate.player, "move": move.id, "damage": move.damage})
 		_apply_character_mechanic(attacker, move, candidate.blocked, defender_was_attacking)
+		if candidate.blocked:
+			attacker.gain_conviction(METER_GAIN_BLOCK)
+			defender.gain_conviction(METER_GAIN_GUARD)
+		else:
+			attacker.gain_conviction(METER_GAIN_HIT)
+			defender.gain_conviction(METER_GAIN_RECEIVED)
+		events.append({"type": &"conviction_changed", "attacker": attacker.fighter_id, "attacker_value": attacker.conviction, "defender": defender.fighter_id, "defender_value": defender.conviction})
 		hitstop_frames = maxi(hitstop_frames, move.hitstop)
 
 
@@ -394,6 +425,10 @@ func _is_blocking(fighter: FighterSimulation, input: FrameInput) -> bool:
 
 
 func _can_start_action(fighter: FighterSimulation, action: StringName) -> bool:
+	if action == &"conquer_art":
+		return fighter.conviction >= FighterSimulation.CONVICTION_BAR
+	if action == &"ultimate":
+		return fighter.conviction >= FighterSimulation.CONVICTION_MAX
 	if fighter.character_id == &"xenon" and action == &"special_down":
 		return fighter.emotional_echo_tokens > 0 and fighter.puppet_delay_frames == 0 and fighter.puppet_active_frames == 0
 	return true
@@ -412,12 +447,50 @@ func _can_cancel(move: MoveDefinition, action: StringName) -> bool:
 
 
 func _prepare_action(fighter: FighterSimulation, action: StringName) -> void:
-	if fighter.character_id == &"izuna" and action == &"special_neutral" and fighter.consume_memory_mark_for_recall():
+	if action == &"ultimate":
+		fighter.spend_conviction(FighterSimulation.CONVICTION_MAX)
+		events.append({"type": &"ultimate_started", "fighter": fighter.fighter_id})
+	elif action == &"conquer_art" and fighter.spend_conviction(FighterSimulation.CONVICTION_BAR):
+		if fighter.character_id == &"izuna":
+			fighter.consume_memory_mark_for_recall(true)
+			events.append({"type": &"delayed_effect_started", "fighter": fighter.fighter_id, "effect": &"recall"})
+		else:
+			fighter.consume_echo_for_puppet(true)
+			events.append({"type": &"delayed_effect_started", "fighter": fighter.fighter_id, "effect": &"puppet"})
+		events.append({"type": &"conquer_art_started", "fighter": fighter.fighter_id})
+	elif fighter.character_id == &"izuna" and action == &"special_neutral" and fighter.consume_memory_mark_for_recall():
 		events.append({"type": &"character_mechanic_changed", "fighter": fighter.fighter_id, "mechanic": &"memory_mark", "value": 0})
 		events.append({"type": &"delayed_effect_started", "fighter": fighter.fighter_id, "effect": &"recall"})
 	elif fighter.character_id == &"xenon" and action == &"special_down" and fighter.consume_echo_for_puppet():
 		events.append({"type": &"character_mechanic_changed", "fighter": fighter.fighter_id, "mechanic": &"emotional_echo", "value": 0})
 		events.append({"type": &"delayed_effect_started", "fighter": fighter.fighter_id, "effect": &"puppet"})
+
+
+func _handle_resource_input(fighter: FighterSimulation, opponent: FighterSimulation, input: FrameInput) -> void:
+	if not input.resource_pressed:
+		return
+	if fighter.state in [FighterSimulation.State.HITSTUN, FighterSimulation.State.BLOCKSTUN] and fighter.burst_available:
+		fighter.burst_available = false
+		fighter.current_move = null
+		fighter.buffered_attack = &""
+		fighter.buffer_frames = 0
+		fighter.state = FighterSimulation.State.BURST
+		fighter.state_frame = FighterSimulation.BURST_RECOVERY_FRAMES
+		if absi(opponent.position.x - fighter.position.x) <= BURST_RANGE:
+			opponent.receive_burst(fighter.facing)
+		events.append({"type": &"burst_activated", "fighter": fighter.fighter_id})
+		return
+	if fighter.state == FighterSimulation.State.ATTACK and fighter.current_move != null:
+		var can_shift := fighter.current_move.phase_at(fighter.move_frame) == &"recovery" and not fighter.current_move.is_throw
+		if can_shift and fighter.spend_conviction(FighterSimulation.CONVICTION_BAR):
+			fighter.current_move = null
+			fighter.move_frame = 0
+			fighter.move_has_hit = false
+			_set_state(fighter, FighterSimulation.State.IDLE)
+			events.append({"type": &"shift_cancel", "fighter": fighter.fighter_id})
+		return
+	if fighter.can_start_attack() and fighter.conviction >= FighterSimulation.CONVICTION_BAR:
+		fighter.queue_attack(&"conquer_art")
 
 
 func _resolve_pushboxes() -> void:

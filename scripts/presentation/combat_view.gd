@@ -38,6 +38,9 @@ func _draw_fighter(fighter: FighterSimulation, body_color: Color, accent: Color,
 
 	if fighter.state == FighterSimulation.State.ATTACK and fighter.current_move != null:
 		_draw_attack_effect(fighter, bottom, accent)
+	elif fighter.state == FighterSimulation.State.BURST:
+		for ring in range(3):
+			draw_arc(bottom + Vector2(0, -96), 54 + ring * 24, 0, TAU, 36, Color(0.75, 0.95, 1.0, 0.82 - ring * 0.18), 8 - ring * 2)
 	elif fighter.state == FighterSimulation.State.BLOCKSTUN:
 		draw_arc(bottom + Vector2(fighter.facing * 22, -90), 48, -1.4, 1.4, 16, Color("77d8ff"), 7)
 	elif fighter.state in [FighterSimulation.State.GUARD_STARTUP, FighterSimulation.State.GUARD, FighterSimulation.State.GUARD_RECOVERY]:
@@ -98,7 +101,13 @@ func _draw_fighter_art(fighter: FighterSimulation, bottom: Vector2) -> void:
 func _draw_attack_effect(fighter: FighterSimulation, bottom: Vector2, accent: Color) -> void:
 	var move_id := str(fighter.current_move.id)
 	var arc_center := bottom + Vector2(fighter.facing * 70, -108)
-	if "foxfire_step" in move_id or "mocking_step" in move_id:
+	if "ninefold_severance" in move_id or "the_last_laugh" in move_id:
+		for ring in range(3):
+			draw_arc(bottom + Vector2(fighter.facing * 100, -105), 80 + ring * 24, -1.55, 1.55, 30, Color(1.0, 0.82 - ring * 0.14, 0.35 + ring * 0.2, 0.9), 13 - ring * 2)
+	elif "sacred_recall" in move_id or "unmasked_chorus" in move_id:
+		draw_arc(arc_center, 86, -1.45, 1.45, 28, Color("ffe3a1"), 13)
+		draw_arc(arc_center, 64, -1.45, 1.45, 24, accent, 7)
+	elif "foxfire_step" in move_id or "mocking_step" in move_id:
 		draw_line(bottom + Vector2(-fighter.facing * 55, -80), bottom + Vector2(fighter.facing * 125, -100), accent, 14)
 	elif "memory_break" in move_id:
 		draw_arc(bottom + Vector2(0, -120), 72, PI, TAU, 24, Color("fff0d1"), 11)
@@ -147,6 +156,8 @@ func _draw_health() -> void:
 	_draw_mechanic_bar(Rect2(54, 84, 180, 6), simulation.player.memory_mark_frames / float(FighterSimulation.MEMORY_MARK_DURATION), Color("ff6a55"), "MEMORY")
 	var echo_ratio := simulation.dummy.emotional_echo_frames / float(FighterSimulation.EMOTIONAL_ECHO_DURATION)
 	_draw_mechanic_bar(Rect2(size.x - 234, 84, 180, 6), echo_ratio, Color("e66cff"), "EMOTION", true)
+	_draw_conviction_gauge(Rect2(54, 111, 260, 9), simulation.player, Color("ffb55e"), false)
+	_draw_conviction_gauge(Rect2(size.x - 314, 111, 260, 9), simulation.dummy, Color("ef8cff"), true)
 
 	for index in simulation.player.rounds_won:
 		draw_circle(Vector2(254 + index * 22, 88), 7, Color("ffcf79"))
@@ -174,6 +185,22 @@ func _draw_mechanic_bar(rect: Rect2, ratio: float, accent: Color, label: String,
 	draw_rect(Rect2(x, rect.position.y, fill_width, rect.size.y), accent)
 	var label_x := rect.position.x if not align_right else rect.position.x - 70
 	draw_string(ThemeDB.fallback_font, Vector2(label_x, rect.position.y + 20), label, HORIZONTAL_ALIGNMENT_RIGHT if align_right else HORIZONTAL_ALIGNMENT_LEFT, 70 if align_right else -1, 10, Color("d9cadf"))
+
+
+func _draw_conviction_gauge(rect: Rect2, fighter: FighterSimulation, accent: Color, align_right: bool) -> void:
+	for bar in range(3):
+		var segment_width := (rect.size.x - 8.0) / 3.0
+		var visual_index := 2 - bar if align_right else bar
+		var segment := Rect2(rect.position.x + visual_index * (segment_width + 4.0), rect.position.y, segment_width, rect.size.y)
+		var fill := clampf((fighter.conviction - bar * FighterSimulation.CONVICTION_BAR) / float(FighterSimulation.CONVICTION_BAR), 0.0, 1.0)
+		draw_rect(segment, Color(0.07, 0.045, 0.09, 0.94))
+		var fill_width := segment.size.x * fill
+		var fill_x := segment.end.x - fill_width if align_right else segment.position.x
+		draw_rect(Rect2(fill_x, segment.position.y, fill_width, segment.size.y), accent)
+		draw_rect(segment, Color("e8d2d9"), false, 1)
+	var burst_center := Vector2(rect.end.x + 18 if not align_right else rect.position.x - 18, rect.get_center().y)
+	draw_circle(burst_center, 8, Color("bff7ff") if fighter.burst_available else Color("3f3548"))
+	draw_arc(burst_center, 10, 0, TAU, 16, Color("efffff") if fighter.burst_available else Color("766a7e"), 2)
 
 
 func _draw_match_status() -> void:
@@ -216,6 +243,7 @@ func _draw_debug_text() -> void:
 		"P1 %s f%d | %s %s f%d [%s] | HP %d" % [FighterSimulation.State.keys()[player_one.state], player_one.state_frame, move_name_one, phase_one, player_one.move_frame, data_one, player_one.health],
 		"P2 %s f%d | %s %s f%d [%s] | HP %d" % [FighterSimulation.State.keys()[player_two.state], player_two.state_frame, move_name_two, phase_two, player_two.move_frame, data_two, player_two.health],
 		"P1 POS %d,%d | P2 POS %d,%d" % [player_one.position.x / 1000, player_one.position.y / 1000, player_two.position.x / 1000, player_two.position.y / 1000],
+		"P1 METER %d BURST %s | P2 METER %d BURST %s" % [player_one.conviction, player_one.burst_available, player_two.conviction, player_two.burst_available],
 		"MEMORY %d RECALL %d | ECHO %d (%d) PUPPET %d" % [player_one.memory_mark_frames, player_one.recall_delay_frames, player_two.emotional_echo_tokens, player_two.emotional_echo_frames, player_two.puppet_delay_frames],
 	]
 	for index in lines.size():

@@ -18,8 +18,8 @@ var last_tap_frame := {
 
 func _ready() -> void:
 	combat_view.simulation = simulation
-	phase_label.text = "P1 J/K/L/I/U/O  |  P2 1/2/3/4/5/6  |  F1 DEBUG  |  F2 RESET  |  F3 REFILL"
-	print("Conquer Combat v0.1c character contrast foundation loaded.")
+	phase_label.text = "P1 J/K/L/I/U/O/P/[  |  P2 1-8  |  F1 DEBUG  |  F2 RESET  |  F3 REFILL"
+	print("Conquer Combat v0.5a universal resource systems loaded.")
 
 
 func _physics_process(_delta: float) -> void:
@@ -62,8 +62,10 @@ func _capture_player_one() -> FrameInput:
 	result.special_pressed = _just_pressed(KEY_I) or _joy_just_pressed(0, JOY_BUTTON_A)
 	result.guard_held = Input.is_key_pressed(KEY_U) or Input.is_joy_button_pressed(0, JOY_BUTTON_LEFT_SHOULDER)
 	result.throw_pressed = _just_pressed(KEY_O) or _joy_just_pressed(0, JOY_BUTTON_RIGHT_SHOULDER)
+	result.resource_pressed = _just_pressed(KEY_P) or _joy_just_pressed(0, JOY_BUTTON_LEFT_STICK)
+	result.ultimate_pressed = _just_pressed(KEY_BRACKETLEFT) or _joy_just_pressed(0, JOY_BUTTON_RIGHT_STICK)
 	_apply_double_tap(result, left_pressed, right_pressed, simulation.player.facing, &"p1_left", &"p1_right")
-	_update_previous_keys([KEY_A, KEY_D, KEY_J, KEY_K, KEY_L, KEY_I, KEY_U, KEY_O])
+	_update_previous_keys([KEY_A, KEY_D, KEY_J, KEY_K, KEY_L, KEY_I, KEY_U, KEY_O, KEY_P, KEY_BRACKETLEFT])
 	return result
 
 
@@ -81,8 +83,10 @@ func _capture_player_two() -> FrameInput:
 	result.special_pressed = _just_pressed(KEY_4) or _joy_just_pressed(1, JOY_BUTTON_A)
 	result.guard_held = Input.is_key_pressed(KEY_5) or Input.is_joy_button_pressed(1, JOY_BUTTON_LEFT_SHOULDER)
 	result.throw_pressed = _just_pressed(KEY_6) or _joy_just_pressed(1, JOY_BUTTON_RIGHT_SHOULDER)
+	result.resource_pressed = _just_pressed(KEY_7) or _joy_just_pressed(1, JOY_BUTTON_LEFT_STICK)
+	result.ultimate_pressed = _just_pressed(KEY_8) or _joy_just_pressed(1, JOY_BUTTON_RIGHT_STICK)
 	_apply_double_tap(result, left_pressed, right_pressed, simulation.dummy.facing, &"p2_left", &"p2_right")
-	_update_previous_keys([KEY_LEFT, KEY_RIGHT, KEY_1, KEY_2, KEY_3, KEY_4, KEY_5, KEY_6])
+	_update_previous_keys([KEY_LEFT, KEY_RIGHT, KEY_1, KEY_2, KEY_3, KEY_4, KEY_5, KEY_6, KEY_7, KEY_8])
 	return result
 
 

@@ -13,6 +13,8 @@ var medium_pressed := false
 var heavy_pressed := false
 var special_pressed := false
 var throw_pressed := false
+var resource_pressed := false
+var ultimate_pressed := false
 
 
 func horizontal_axis() -> int:

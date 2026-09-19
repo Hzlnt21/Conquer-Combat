@@ -11,6 +11,7 @@ enum State {
 	GUARD_STARTUP,
 	GUARD,
 	GUARD_RECOVERY,
+	BURST,
 	ATTACK,
 	BLOCKSTUN,
 	HITSTUN,
@@ -39,6 +40,11 @@ const PUPPET_DELAY_FRAMES := 45
 const DELAYED_ACTIVE_FRAMES := 3
 const GUARD_STARTUP_FRAMES := 4
 const GUARD_RECOVERY_FRAMES := 10
+const CONVICTION_MAX := 3000
+const CONVICTION_BAR := 1000
+const BURST_RECOVERY_FRAMES := 28
+const BURST_HITSTUN_FRAMES := 18
+const BURST_PUSHBACK := 14 * UNITS_PER_PIXEL
 
 var fighter_id: StringName
 var character_id: StringName
@@ -50,6 +56,8 @@ var facing := 1
 var health := 1000
 var is_dummy := false
 var rounds_won := 0
+var conviction := 0
+var burst_available := true
 var walk_forward_speed := WALK_FORWARD_SPEED
 var walk_back_speed := WALK_BACK_SPEED
 var dash_speed := DASH_SPEED
@@ -133,6 +141,27 @@ func receive_block(move: MoveDefinition, attacker_facing: int, covenant_guard :=
 	state_frame = maxi(3, normal_blockstun / 2) if covenant_guard else normal_blockstun
 
 
+func receive_burst(attacker_facing: int) -> void:
+	velocity.x = BURST_PUSHBACK * attacker_facing
+	current_move = null
+	move_frame = 0
+	buffered_attack = &""
+	buffer_frames = 0
+	state = State.HITSTUN
+	state_frame = BURST_HITSTUN_FRAMES
+
+
+func gain_conviction(amount: int) -> void:
+	conviction = clampi(conviction + amount, 0, CONVICTION_MAX)
+
+
+func spend_conviction(amount: int) -> bool:
+	if conviction < amount:
+		return false
+	conviction -= amount
+	return true
+
+
 func reset_for_round(start_position: Vector2i) -> void:
 	state = State.IDLE
 	state_frame = 0
@@ -144,6 +173,8 @@ func reset_for_round(start_position: Vector2i) -> void:
 	move_has_hit = false
 	buffered_attack = &""
 	buffer_frames = 0
+	conviction = 0
+	burst_available = true
 	clear_character_mechanic()
 
 
@@ -160,8 +191,8 @@ func grant_emotional_echo() -> void:
 	emotional_echo_frames = EMOTIONAL_ECHO_DURATION
 
 
-func consume_memory_mark_for_recall() -> bool:
-	if character_id != &"izuna" or memory_mark_frames <= 0:
+func consume_memory_mark_for_recall(force := false) -> bool:
+	if character_id != &"izuna" or (memory_mark_frames <= 0 and not force):
 		return false
 	memory_mark_frames = 0
 	recall_delay_frames = RECALL_DELAY_FRAMES
@@ -170,8 +201,8 @@ func consume_memory_mark_for_recall() -> bool:
 	return true
 
 
-func consume_echo_for_puppet() -> bool:
-	if character_id != &"xenon" or emotional_echo_tokens <= 0 or puppet_delay_frames > 0 or puppet_active_frames > 0:
+func consume_echo_for_puppet(force := false) -> bool:
+	if character_id != &"xenon" or (emotional_echo_tokens <= 0 and not force) or puppet_delay_frames > 0 or puppet_active_frames > 0:
 		return false
 	emotional_echo_tokens = 0
 	emotional_echo_frames = 0

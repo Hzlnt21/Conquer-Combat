@@ -35,6 +35,12 @@ func _init() -> void:
 	_test_throw_misses_airborne_opponent()
 	_test_throw_whiff_has_recovery()
 	_test_training_resets()
+	_test_conviction_gain_and_cap()
+	_test_conquer_arts_consume_meter_and_start_mechanics()
+	_test_shift_cancel_spends_meter_during_recovery()
+	_test_burst_escapes_stun_once_per_round()
+	_test_ultimate_requires_and_consumes_full_meter()
+	_test_round_reset_restores_universal_resources()
 
 	if failures == 0:
 		print("PASS: %d assertions" % assertions)
@@ -554,6 +560,115 @@ func _test_training_resets() -> void:
 	simulation.refill_training_state()
 	_expect(simulation.player.health == 1000 and simulation.dummy.health == 1000, "Training refill restores both health bars")
 	_expect(simulation.player.memory_mark_frames == 0, "Training refill clears character mechanics")
+	_expect(simulation.player.conviction == FighterSimulation.CONVICTION_MAX and simulation.dummy.conviction == FighterSimulation.CONVICTION_MAX, "Training refill fills both Conviction gauges")
+	_expect(simulation.player.burst_available and simulation.dummy.burst_available, "Training refill restores both Burst charges")
+
+
+func _test_conviction_gain_and_cap() -> void:
+	var hit_simulation := CombatSimulation.new()
+	hit_simulation.player.position.x = 350 * CombatSimulation.UNITS_PER_PIXEL
+	hit_simulation.dummy.position.x = 450 * CombatSimulation.UNITS_PER_PIXEL
+	var attack := FrameInput.new()
+	attack.light_pressed = true
+	hit_simulation.tick(attack, FrameInput.new())
+	for _index in range(5):
+		hit_simulation.tick(FrameInput.new(), FrameInput.new())
+	_expect(hit_simulation.player.conviction == CombatSimulation.METER_GAIN_HIT, "Landing a hit grants substantial Conviction")
+	_expect(hit_simulation.dummy.conviction == CombatSimulation.METER_GAIN_RECEIVED, "Receiving a hit grants comeback Conviction")
+
+	var block_simulation := CombatSimulation.new()
+	block_simulation.player.position.x = 350 * CombatSimulation.UNITS_PER_PIXEL
+	block_simulation.dummy.position.x = 450 * CombatSimulation.UNITS_PER_PIXEL
+	var block := FrameInput.new()
+	block.right = true
+	block_simulation.tick(attack, block)
+	for _index in range(5):
+		block_simulation.tick(FrameInput.new(), block)
+	_expect(block_simulation.player.conviction == CombatSimulation.METER_GAIN_BLOCK, "Blocked offense grants reduced Conviction")
+	_expect(block_simulation.dummy.conviction == CombatSimulation.METER_GAIN_GUARD, "Defending grants a small Conviction reward")
+	block_simulation.player.gain_conviction(9999)
+	_expect(block_simulation.player.conviction == FighterSimulation.CONVICTION_MAX, "Conviction is capped at three bars")
+
+
+func _test_conquer_arts_consume_meter_and_start_mechanics() -> void:
+	var izuna_simulation := CombatSimulation.new()
+	izuna_simulation.player.conviction = FighterSimulation.CONVICTION_BAR
+	var resource := FrameInput.new()
+	resource.resource_pressed = true
+	izuna_simulation.tick(resource, FrameInput.new())
+	_expect(izuna_simulation.player.current_move.id == &"izuna_sacred_recall", "Izuna Resource input starts Sacred Recall")
+	_expect(izuna_simulation.player.conviction == 0, "Sacred Recall consumes one Conviction bar")
+	_expect(izuna_simulation.player.recall_delay_frames == FighterSimulation.RECALL_DELAY_FRAMES, "Sacred Recall creates Recall without an existing Mark")
+
+	var xenon_simulation := CombatSimulation.new()
+	xenon_simulation.dummy.conviction = FighterSimulation.CONVICTION_BAR
+	xenon_simulation.tick(FrameInput.new(), resource)
+	_expect(xenon_simulation.dummy.current_move.id == &"xenon_unmasked_chorus", "Xenon Resource input starts Unmasked Chorus")
+	_expect(xenon_simulation.dummy.conviction == 0, "Unmasked Chorus consumes one Conviction bar")
+	_expect(xenon_simulation.dummy.puppet_delay_frames == FighterSimulation.PUPPET_DELAY_FRAMES, "Unmasked Chorus summons a Puppet without Echo")
+
+
+func _test_shift_cancel_spends_meter_during_recovery() -> void:
+	var simulation := CombatSimulation.new()
+	simulation.player.conviction = FighterSimulation.CONVICTION_BAR
+	var attack := FrameInput.new()
+	attack.light_pressed = true
+	simulation.tick(attack, FrameInput.new())
+	for _index in range(8):
+		simulation.tick(FrameInput.new(), FrameInput.new())
+	_expect(simulation.player.current_move.phase_at(simulation.player.move_frame) == &"recovery", "Move reaches recovery before Shift Cancel")
+	var resource := FrameInput.new()
+	resource.resource_pressed = true
+	simulation.tick(resource, FrameInput.new())
+	_expect(simulation.player.state == FighterSimulation.State.IDLE, "Shift Cancel returns recovery to neutral")
+	_expect(simulation.player.conviction == 0, "Shift Cancel consumes one Conviction bar")
+
+
+func _test_burst_escapes_stun_once_per_round() -> void:
+	var simulation := CombatSimulation.new()
+	simulation.player.position.x = 600 * CombatSimulation.UNITS_PER_PIXEL
+	simulation.dummy.position.x = 760 * CombatSimulation.UNITS_PER_PIXEL
+	simulation.player.state = FighterSimulation.State.HITSTUN
+	simulation.player.state_frame = 20
+	var resource := FrameInput.new()
+	resource.resource_pressed = true
+	simulation.tick(resource, FrameInput.new())
+	_expect(simulation.player.state == FighterSimulation.State.BURST, "Resource input during hitstun activates Burst")
+	_expect(not simulation.player.burst_available, "Burst charge is consumed")
+	_expect(simulation.dummy.state == FighterSimulation.State.HITSTUN, "Burst pushes the opponent into hitstun")
+	_expect(simulation.dummy.velocity.x > 0, "Burst pushes the opponent away from Izuna")
+	var remaining_recovery := simulation.player.state_frame
+	simulation.tick(resource, FrameInput.new())
+	_expect(simulation.player.state_frame == remaining_recovery - 1, "Consumed Burst cannot activate again in the same round")
+
+
+func _test_ultimate_requires_and_consumes_full_meter() -> void:
+	var unavailable := CombatSimulation.new()
+	var ultimate := FrameInput.new()
+	ultimate.ultimate_pressed = true
+	unavailable.tick(ultimate, FrameInput.new())
+	_expect(unavailable.player.current_move == null, "Ultimate cannot start without three Conviction bars")
+
+	var simulation := CombatSimulation.new()
+	simulation.player.position.x = 350 * CombatSimulation.UNITS_PER_PIXEL
+	simulation.dummy.position.x = 500 * CombatSimulation.UNITS_PER_PIXEL
+	simulation.player.conviction = FighterSimulation.CONVICTION_MAX
+	simulation.tick(ultimate, FrameInput.new())
+	_expect(simulation.player.current_move.id == &"izuna_ninefold_severance", "Full meter enables Izuna Ultimate")
+	_expect(simulation.player.conviction == 0, "Ultimate consumes all Conviction bars on startup")
+	for _index in range(12):
+		simulation.tick(FrameInput.new(), FrameInput.new())
+	_expect(simulation.dummy.health == 640, "Ninefold Severance deals Ultimate damage")
+	_expect(simulation.dummy.state == FighterSimulation.State.KNOCKDOWN, "Ultimate causes hard knockdown placeholder")
+
+
+func _test_round_reset_restores_universal_resources() -> void:
+	var fighter := FighterSimulation.new(&"resource_test", Vector2i.ZERO, &"izuna")
+	fighter.conviction = FighterSimulation.CONVICTION_MAX
+	fighter.burst_available = false
+	fighter.reset_for_round(Vector2i.ZERO)
+	_expect(fighter.conviction == 0, "Conviction resets between rounds")
+	_expect(fighter.burst_available, "Burst charge refreshes each round")
 
 
 func _expect(condition: bool, message: String) -> void:

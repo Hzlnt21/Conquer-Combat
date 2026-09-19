@@ -2,7 +2,7 @@
 
 Prototype fighting game 2D untuk browser dan Windows, dibuat dengan Godot 4.6.3 Standard dan GDScript.
 
-Status saat ini: milestone v0.1d defensive slice selesai dan combat visual integration v01 telah berjalan di browser build.
+Status saat ini: milestone v0.5a universal resource systems dan combat visual integration v01 telah berjalan di browser build.
 
 Prototype saat ini memiliki:
 
@@ -16,6 +16,7 @@ Prototype saat ini memiliki:
 - Tiga special placeholder per karakter: Recall Slash, Foxfire Step, Memory Break, Laughing Chain, Mocking Step, dan Despair Puppet.
 - Basic cancel route pada hit atau block: `Light -> Medium -> Heavy -> Special`.
 - Covenant Guard, ground throw, training reset, dan frame-data debug readout.
+- Tiga bar Conviction, Conquer Art, Shift Cancel, satu Burst per ronde, dan Ultimate untuk kedua karakter.
 - Keyboard dua pemain dan basic controller mapping.
 - Debug overlay serta reset dengan tombol `R`.
 - Web export dan headless regression tests.
@@ -38,12 +39,14 @@ Prototype saat ini memiliki:
 | Special | `I` | `4` | A / Cross |
 | Covenant Guard | `U` | `5` | Left shoulder |
 | Throw | `O` | `6` | Right shoulder |
+| Resource | `P` | `7` | Left stick click |
+| Ultimate | `[` | `8` | Right stick click |
 | Reset match | `R` | `R` | - |
 | Debug overlay | `F1` | `F1` | - |
 | Training reset | `F2` | `F2` | - |
 | Refill health/resources | `F3` | `F3` | - |
 
-Special dipilih dengan arah yang sedang ditahan: tanpa arah untuk Neutral Special, arah maju untuk Forward Special, dan bawah untuk Down Special. Normal block dilakukan dengan menahan arah menjauh dari lawan. Covenant Guard memiliki startup dan recovery, mengurangi blockstun serta pushback, tetapi tetap kalah terhadap Throw.
+Special dipilih dengan arah yang sedang ditahan: tanpa arah untuk Neutral Special, arah maju untuk Forward Special, dan bawah untuk Down Special. Normal block dilakukan dengan menahan arah menjauh dari lawan. Covenant Guard memiliki startup dan recovery, mengurangi blockstun serta pushback, tetapi tetap kalah terhadap Throw. Resource bersifat kontekstual: Conquer Art saat netral, Shift Cancel saat recovery, dan Burst ketika berada dalam hitstun atau blockstun.
 
 ## Dokumen
 

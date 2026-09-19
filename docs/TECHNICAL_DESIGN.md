@@ -406,3 +406,17 @@ Milestone v0.1c dianggap implementation-complete. Angka frame, jarak, damage, in
 - Web release berhasil dirender melalui HTTP lokal di Chromium; baseline payload awal adalah 42.96 MiB.
 
 Milestone v0.1d implementation-complete. Throw escape tetap wajib sebelum public v1.0 sesuai GDD.
+
+### v0.5a universal resource systems
+
+- Conviction menggunakan tiga bar integer, masing-masing bernilai 1000 units.
+- Meter bertambah saat hit, block, menerima hit, dan bertahan; nilainya dibatasi pada tiga bar.
+- Resource input bersifat kontekstual: Conquer Art dari neutral, Shift Cancel saat recovery, dan Burst saat hitstun atau blockstun.
+- Sacred Recall memaksa delayed Recall tanpa Memory Mark; Unmasked Chorus memanggil Puppet tanpa Emotional Echo.
+- Shift Cancel mengonsumsi satu bar dan tidak dapat membatalkan throw recovery atau hitstop.
+- Burst memiliki satu charge per ronde, jangkauan terbatas, recovery, pushback, dan tidak memberikan damage.
+- Ninefold Severance dan The Last Laugh membutuhkan serta mengonsumsi tiga bar.
+- HUD menampilkan tiga segment Conviction serta status Burst untuk kedua fighter.
+- Regression suite mencakup 106 assertions.
+
+Cinematic framing, final hit animation, combo scaling, dan final meter tuning masih provisional hingga animation dan playtest pass.
