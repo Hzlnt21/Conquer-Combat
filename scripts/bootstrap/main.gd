@@ -2,8 +2,10 @@ extends Control
 
 @onready var combat_view: CombatView = %CombatView
 @onready var phase_label: Label = %PhaseLabel
+@onready var header: Control = $Header
 
 var simulation := CombatSimulation.new()
+var help_frames_remaining := 360
 var previous_keys: Dictionary[int, bool] = {}
 var previous_joy_buttons: Dictionary[String, bool] = {}
 var last_tap_frame := {
@@ -16,7 +18,7 @@ var last_tap_frame := {
 
 func _ready() -> void:
 	combat_view.simulation = simulation
-	phase_label.text = "P1 J/K/L/I/U/O | P2 1/2/3/4/5/6 | F1 debug | F2 positions | F3 refill"
+	phase_label.text = "P1 J/K/L/I/U/O  |  P2 1/2/3/4/5/6  |  F1 DEBUG  |  F2 RESET  |  F3 REFILL"
 	print("Conquer Combat v0.1c character contrast foundation loaded.")
 
 
@@ -24,6 +26,11 @@ func _physics_process(_delta: float) -> void:
 	var input_one := _capture_player_one()
 	var input_two := _capture_player_two()
 	simulation.tick(input_one, input_two)
+	if help_frames_remaining > 0:
+		help_frames_remaining -= 1
+		header.modulate.a = clampf(help_frames_remaining / 60.0, 0.0, 1.0)
+	else:
+		header.visible = false
 	combat_view.queue_redraw()
 
 

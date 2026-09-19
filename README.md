@@ -2,7 +2,7 @@
 
 Prototype fighting game 2D untuk browser dan Windows, dibuat dengan Godot 4.6.3 Standard dan GDScript.
 
-Status saat ini: milestone v0.1d defensive slice selesai dan Izuna production gate telah tervalidasi.
+Status saat ini: milestone v0.1d defensive slice selesai dan combat visual integration v01 telah berjalan di browser build.
 
 Prototype saat ini memiliki:
 
@@ -25,6 +25,7 @@ Prototype saat ini memiliki:
 - Idle key pose Izuna telah tersedia sebagai seed frame untuk redraw dan rigging.
 - Clean redraw idle Izuna dan separation map awal telah tersedia.
 - Visual scale proof Izuna pada viewport 1280x720 telah tervalidasi.
+- Ruined Shrine, Izuna, Xenon, dan HUD production-style telah terintegrasi menggantikan placeholder boxes saat debug dimatikan.
 
 ## Kontrol Prototype
 
@@ -49,6 +50,7 @@ Special dipilih dengan arah yang sedang ditahan: tanpa arah untuk Neutral Specia
 - Game Design Document: `docs/GDD.md`
 - Technical Design Document: `docs/TECHNICAL_DESIGN.md`
 - Web Performance Baseline: `docs/WEB_PERFORMANCE_BASELINE.md`
+- Combat Visual Integration: `docs/visual-development/COMBAT_VISUAL_INTEGRATION_V01.md`
 - Izuna Visual Brief: `docs/VISUAL_BRIEF_IZUNA.md`
 - Izuna Production Package: `docs/production/IZUNA_PRODUCTION_PACKAGE.md`
 

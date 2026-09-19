@@ -2,6 +2,9 @@ class_name CombatView
 extends Control
 
 const UNITS_PER_PIXEL := 1000.0
+const STAGE_TEXTURE := preload("res://assets/stages/ruined-shrine/ruined-shrine-bg-v01.png")
+const IZUNA_TEXTURE := preload("res://assets/characters/izuna/game-ready/izuna-combat-idle-v01.png")
+const XENON_TEXTURE := preload("res://assets/characters/xenon/game-ready/xenon-combat-idle-v01.png")
 
 var simulation: CombatSimulation
 var show_debug := false
@@ -21,27 +24,17 @@ func _draw() -> void:
 
 
 func _draw_stage() -> void:
-	draw_rect(Rect2(0, 0, size.x, size.y), Color("0d0a13"))
-	draw_circle(Vector2(size.x * 0.5, 210), 135, Color("24162b"))
-	draw_arc(Vector2(size.x * 0.5, 210), 135, 0, TAU, 64, Color("6b304f"), 3)
-	for index in range(7):
-		var x := 100.0 + index * 180.0
-		draw_line(Vector2(x, 250), Vector2(x - 70, 590), Color("211928"), 18)
-	draw_rect(Rect2(0, 590, size.x, size.y - 590), Color("17121d"))
-	draw_line(Vector2(0, 590), Vector2(size.x, 590), Color("8a5a65"), 3)
+	draw_texture_rect(STAGE_TEXTURE, Rect2(Vector2.ZERO, size), false)
+	draw_rect(Rect2(0, 0, size.x, 122), Color(0.025, 0.018, 0.045, 0.72))
+	draw_rect(Rect2(0, 520, size.x, size.y - 520), Color(0.035, 0.02, 0.05, 0.18))
+	draw_line(Vector2(0, 590), Vector2(size.x, 590), Color(0.82, 0.54, 0.63, 0.35), 2)
 
 
 func _draw_fighter(fighter: FighterSimulation, body_color: Color, accent: Color, label: String) -> void:
 	var bottom := Vector2(fighter.position) / UNITS_PER_PIXEL
 	var body := _to_screen_rect(fighter.body_rect())
-
-	draw_rect(body, body_color, true)
-	draw_rect(Rect2(body.position + Vector2(8, 12), Vector2(body.size.x - 16, 24)), accent, true)
-	draw_circle(Vector2(body.get_center().x, body.position.y + 30), 21, accent)
-
-	var sword_origin := Vector2(body.get_center().x + fighter.facing * 18, body.position.y + 72)
-	var sword_tip := sword_origin + Vector2(fighter.facing * 92, -22)
-	draw_line(sword_origin, sword_tip, accent, 8)
+	_draw_fighter_shadow(bottom, accent)
+	_draw_fighter_art(fighter, bottom)
 
 	if fighter.state == FighterSimulation.State.ATTACK and fighter.current_move != null:
 		_draw_attack_effect(fighter, bottom, accent)
@@ -55,9 +48,8 @@ func _draw_fighter(fighter: FighterSimulation, body_color: Color, accent: Color,
 		draw_line(bottom + Vector2(-48, -16), bottom + Vector2(48, -16), accent, 20)
 	_draw_delayed_effects(fighter, bottom)
 
-	draw_string(ThemeDB.fallback_font, body.position + Vector2(0, -10), label, HORIZONTAL_ALIGNMENT_LEFT, -1, 16, body_color)
-
 	if show_debug:
+		draw_string(ThemeDB.fallback_font, body.position + Vector2(0, -10), label, HORIZONTAL_ALIGNMENT_LEFT, -1, 16, body_color)
 		draw_rect(body, Color("62d6ff"), false, 2)
 		var attack_rect := fighter.attack_rect()
 		if attack_rect.has_area():
@@ -68,6 +60,39 @@ func _draw_fighter(fighter: FighterSimulation, body_color: Color, accent: Color,
 		var puppet_rect := fighter.puppet_rect()
 		if puppet_rect.has_area():
 			draw_rect(_to_screen_rect(puppet_rect), Color("ee72ff"), false, 3)
+
+
+func _draw_fighter_shadow(bottom: Vector2, accent: Color) -> void:
+	draw_set_transform(bottom + Vector2(0, -3), 0.0, Vector2(1.0, 0.24))
+	draw_circle(Vector2.ZERO, 72, Color(0.02, 0.01, 0.04, 0.58))
+	draw_arc(Vector2.ZERO, 68, 0, TAU, 36, Color(accent, 0.24), 5)
+	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+
+
+func _draw_fighter_art(fighter: FighterSimulation, bottom: Vector2) -> void:
+	var is_izuna := fighter.character_id == &"izuna"
+	var texture: Texture2D = IZUNA_TEXTURE if is_izuna else XENON_TEXTURE
+	var art_height := 330.0 if is_izuna else 306.0
+	var art_width := art_height * texture.get_width() / float(texture.get_height())
+	var canonical_facing := 1 if is_izuna else -1
+	var flip := 1.0 if fighter.facing == canonical_facing else -1.0
+	var breathe := 1.0 + sin(float(simulation.frame) * 0.075) * 0.008
+	var pose_scale := Vector2(flip, breathe)
+	var pose_rotation := 0.0
+	var tint := Color.WHITE
+	if fighter.state == FighterSimulation.State.ATTACK:
+		pose_scale.x *= 1.035
+	elif fighter.state == FighterSimulation.State.HITSTUN:
+		pose_rotation = -fighter.facing * 0.08
+		tint = Color(1.0, 0.72, 0.72)
+	elif fighter.state == FighterSimulation.State.KNOCKDOWN:
+		pose_rotation = fighter.facing * 1.25
+		pose_scale *= 0.82
+	elif fighter.state == FighterSimulation.State.CROUCH:
+		pose_scale.y *= 0.88
+	draw_set_transform(bottom, pose_rotation, pose_scale)
+	draw_texture_rect(texture, Rect2(-art_width * 0.5, -art_height, art_width, art_height), false, tint)
+	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 
 
 func _draw_attack_effect(fighter: FighterSimulation, bottom: Vector2, accent: Color) -> void:
@@ -109,31 +134,61 @@ func _draw_delayed_effects(fighter: FighterSimulation, bottom: Vector2) -> void:
 
 
 func _draw_health() -> void:
-	var left_bar := Rect2(64, 54, 470, 25)
-	var right_bar := Rect2(size.x - 534, 54, 470, 25)
-	draw_rect(left_bar, Color("2a2430"))
-	draw_rect(right_bar, Color("2a2430"))
-	draw_rect(Rect2(left_bar.position, Vector2(left_bar.size.x * simulation.player.health / 1000.0, left_bar.size.y)), Color("db3652"))
+	var left_bar := Rect2(54, 49, 466, 30)
+	var right_bar := Rect2(size.x - 520, 49, 466, 30)
+	_draw_health_frame(left_bar, simulation.player.health / 1000.0, Color("ed3656"), false)
 	var dummy_width := right_bar.size.x * simulation.dummy.health / 1000.0
-	draw_rect(Rect2(right_bar.end.x - dummy_width, right_bar.position.y, dummy_width, right_bar.size.y), Color("b84fce"))
-	draw_string(ThemeDB.fallback_font, Vector2(64, 46), "P1 IZUNA", HORIZONTAL_ALIGNMENT_LEFT, -1, 18, Color.WHITE)
-	draw_string(ThemeDB.fallback_font, Vector2(size.x - 534, 46), "P2 XENON", HORIZONTAL_ALIGNMENT_RIGHT, 470, 18, Color.WHITE)
+	_draw_health_frame(right_bar, dummy_width / right_bar.size.x, Color("c757dd"), true)
+	draw_string(ThemeDB.fallback_font, Vector2(54, 39), "IZUNA", HORIZONTAL_ALIGNMENT_LEFT, 250, 22, Color("fff7ef"))
+	draw_string(ThemeDB.fallback_font, Vector2(54, 96), "THE SACRED EDGE", HORIZONTAL_ALIGNMENT_LEFT, 280, 12, Color("d7b5aa"))
+	draw_string(ThemeDB.fallback_font, Vector2(size.x - 304, 39), "XENON", HORIZONTAL_ALIGNMENT_RIGHT, 250, 22, Color("fff7ff"))
+	draw_string(ThemeDB.fallback_font, Vector2(size.x - 334, 96), "THE SMILING DESPAIR", HORIZONTAL_ALIGNMENT_RIGHT, 280, 12, Color("d5b1dc"))
+
+	_draw_mechanic_bar(Rect2(54, 84, 180, 6), simulation.player.memory_mark_frames / float(FighterSimulation.MEMORY_MARK_DURATION), Color("ff6a55"), "MEMORY")
+	var echo_ratio := simulation.dummy.emotional_echo_frames / float(FighterSimulation.EMOTIONAL_ECHO_DURATION)
+	_draw_mechanic_bar(Rect2(size.x - 234, 84, 180, 6), echo_ratio, Color("e66cff"), "EMOTION", true)
 
 	for index in simulation.player.rounds_won:
-		draw_circle(Vector2(76 + index * 22, 94), 7, Color("df334f"))
+		draw_circle(Vector2(254 + index * 22, 88), 7, Color("ffcf79"))
 	for index in simulation.dummy.rounds_won:
-		draw_circle(Vector2(size.x - 76 - index * 22, 94), 7, Color("a54cc8"))
+		draw_circle(Vector2(size.x - 254 - index * 22, 88), 7, Color("ffcf79"))
+
+
+func _draw_health_frame(rect: Rect2, ratio: float, accent: Color, fill_from_right: bool) -> void:
+	draw_rect(rect.grow(4), Color(0.025, 0.02, 0.04, 0.94))
+	draw_rect(rect, Color("211c2b"))
+	var fill_width := rect.size.x * clampf(ratio, 0.0, 1.0)
+	var fill_rect := Rect2(rect.end.x - fill_width if fill_from_right else rect.position.x, rect.position.y, fill_width, rect.size.y)
+	draw_rect(fill_rect, accent)
+	draw_rect(Rect2(fill_rect.position, Vector2(fill_rect.size.x, 6)), Color(1.0, 0.9, 0.82, 0.32))
+	draw_rect(rect, Color("f0d7c2"), false, 2)
+	for notch in range(1, 5):
+		var x := rect.position.x + rect.size.x * notch / 5.0
+		draw_line(Vector2(x, rect.position.y + 20), Vector2(x, rect.end.y), Color(0.08, 0.05, 0.11, 0.55), 2)
+
+
+func _draw_mechanic_bar(rect: Rect2, ratio: float, accent: Color, label: String, align_right := false) -> void:
+	draw_rect(rect, Color(0.08, 0.055, 0.1, 0.92))
+	var fill_width := rect.size.x * clampf(ratio, 0.0, 1.0)
+	var x := rect.end.x - fill_width if align_right else rect.position.x
+	draw_rect(Rect2(x, rect.position.y, fill_width, rect.size.y), accent)
+	var label_x := rect.position.x if not align_right else rect.position.x - 70
+	draw_string(ThemeDB.fallback_font, Vector2(label_x, rect.position.y + 20), label, HORIZONTAL_ALIGNMENT_RIGHT if align_right else HORIZONTAL_ALIGNMENT_LEFT, 70 if align_right else -1, 10, Color("d9cadf"))
 
 
 func _draw_match_status() -> void:
+	var center := Vector2(size.x * 0.5, 63)
+	draw_circle(center, 39, Color(0.04, 0.025, 0.06, 0.95))
+	draw_arc(center, 38, 0, TAU, 32, Color("d4a6c8"), 3)
+	draw_arc(center, 31, 0, TAU, 32, Color(0.5, 0.2, 0.4, 0.5), 2)
 	draw_string(
 		ThemeDB.fallback_font,
-		Vector2(size.x * 0.5 - 40, 72),
+		Vector2(size.x * 0.5 - 40, 74),
 		str(simulation.displayed_timer()),
 		HORIZONTAL_ALIGNMENT_CENTER,
 		80,
-		30,
-		Color.WHITE
+		28,
+		Color("fff3e8")
 	)
 	if simulation.match_state == CombatSimulation.MatchState.FIGHTING:
 		return
