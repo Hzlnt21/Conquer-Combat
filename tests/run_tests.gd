@@ -29,6 +29,12 @@ func _init() -> void:
 	_test_foxfire_step_moves_forward()
 	_test_izuna_basic_cancel_route()
 	_test_xenon_basic_cancel_route()
+	_test_covenant_guard_startup_and_recovery()
+	_test_covenant_guard_reduces_blockstun_and_pushback()
+	_test_throw_defeats_block_and_causes_knockdown()
+	_test_throw_misses_airborne_opponent()
+	_test_throw_whiff_has_recovery()
+	_test_training_resets()
 
 	if failures == 0:
 		print("PASS: %d assertions" % assertions)
@@ -439,6 +445,115 @@ func _test_xenon_basic_cancel_route() -> void:
 		simulation.tick(FrameInput.new(), FrameInput.new())
 	simulation.tick(FrameInput.new(), FrameInput.new())
 	_expect(simulation.dummy.current_move.id == &"xenon_laughing_chain", "Xenon cancels Heavy into Laughing Chain")
+
+
+func _test_covenant_guard_startup_and_recovery() -> void:
+	var simulation := CombatSimulation.new()
+	var guard := FrameInput.new()
+	guard.guard_held = true
+	simulation.tick(guard, FrameInput.new())
+	_expect(simulation.player.state == FighterSimulation.State.GUARD_STARTUP, "Covenant Guard begins with startup")
+	for _index in range(FighterSimulation.GUARD_STARTUP_FRAMES):
+		simulation.tick(guard, FrameInput.new())
+	_expect(simulation.player.state == FighterSimulation.State.GUARD, "Holding Guard reaches active stance")
+	simulation.tick(FrameInput.new(), FrameInput.new())
+	_expect(simulation.player.state == FighterSimulation.State.GUARD_RECOVERY, "Releasing Guard begins recovery")
+	for _index in range(FighterSimulation.GUARD_RECOVERY_FRAMES):
+		simulation.tick(FrameInput.new(), FrameInput.new())
+	_expect(simulation.player.state == FighterSimulation.State.IDLE, "Guard recovery returns to idle")
+
+
+func _test_covenant_guard_reduces_blockstun_and_pushback() -> void:
+	var normal := CombatSimulation.new()
+	normal.player.position.x = 350 * CombatSimulation.UNITS_PER_PIXEL
+	normal.dummy.position.x = 450 * CombatSimulation.UNITS_PER_PIXEL
+	var attack := FrameInput.new()
+	attack.light_pressed = true
+	var away := FrameInput.new()
+	away.right = true
+	normal.tick(attack, away)
+	for _index in range(5):
+		normal.tick(FrameInput.new(), away)
+	var normal_stun := normal.dummy.state_frame
+	var normal_pushback := absi(normal.dummy.velocity.x)
+
+	var guarded := CombatSimulation.new()
+	guarded.player.position.x = 350 * CombatSimulation.UNITS_PER_PIXEL
+	guarded.dummy.position.x = 450 * CombatSimulation.UNITS_PER_PIXEL
+	var guard := FrameInput.new()
+	guard.guard_held = true
+	guarded.tick(FrameInput.new(), guard)
+	for _index in range(FighterSimulation.GUARD_STARTUP_FRAMES):
+		guarded.tick(FrameInput.new(), guard)
+	guarded.tick(attack, guard)
+	for _index in range(5):
+		guarded.tick(FrameInput.new(), guard)
+	_expect(guarded.dummy.health == 1000, "Active Covenant Guard blocks incoming strikes")
+	_expect(guarded.dummy.state_frame < normal_stun, "Covenant Guard reduces blockstun")
+	_expect(absi(guarded.dummy.velocity.x) < normal_pushback, "Covenant Guard reduces pushback")
+
+
+func _test_throw_defeats_block_and_causes_knockdown() -> void:
+	var simulation := CombatSimulation.new()
+	simulation.player.position.x = 350 * CombatSimulation.UNITS_PER_PIXEL
+	simulation.dummy.position.x = 440 * CombatSimulation.UNITS_PER_PIXEL
+	var guard := FrameInput.new()
+	guard.guard_held = true
+	simulation.tick(FrameInput.new(), guard)
+	for _index in range(FighterSimulation.GUARD_STARTUP_FRAMES):
+		simulation.tick(FrameInput.new(), guard)
+	_expect(simulation.dummy.state == FighterSimulation.State.GUARD, "Defender has active Covenant Guard before throw")
+	var throw_input := FrameInput.new()
+	throw_input.throw_pressed = true
+	simulation.tick(throw_input, guard)
+	for _index in range(6):
+		simulation.tick(FrameInput.new(), guard)
+	_expect(simulation.dummy.health == 880, "Throw bypasses Covenant Guard")
+	_expect(simulation.dummy.state == FighterSimulation.State.KNOCKDOWN, "Throw causes soft knockdown")
+
+
+func _test_throw_misses_airborne_opponent() -> void:
+	var simulation := CombatSimulation.new()
+	simulation.player.position.x = 350 * CombatSimulation.UNITS_PER_PIXEL
+	simulation.dummy.position = Vector2i(440 * CombatSimulation.UNITS_PER_PIXEL, 500 * CombatSimulation.UNITS_PER_PIXEL)
+	simulation.dummy.state = FighterSimulation.State.AIRBORNE
+	var throw_input := FrameInput.new()
+	throw_input.throw_pressed = true
+	simulation.tick(throw_input, FrameInput.new())
+	for _index in range(8):
+		simulation.tick(FrameInput.new(), FrameInput.new())
+	_expect(simulation.dummy.health == 1000, "Ground throw misses an airborne opponent")
+
+
+func _test_throw_whiff_has_recovery() -> void:
+	var simulation := CombatSimulation.new()
+	var throw_input := FrameInput.new()
+	throw_input.throw_pressed = true
+	simulation.tick(throw_input, FrameInput.new())
+	var throw_move := simulation.player.current_move
+	for _index in range(throw_move.startup + throw_move.active):
+		simulation.tick(FrameInput.new(), FrameInput.new())
+	_expect(simulation.player.state == FighterSimulation.State.ATTACK, "Whiffed throw remains committed during recovery")
+	for _index in range(throw_move.recovery):
+		simulation.tick(FrameInput.new(), FrameInput.new())
+	_expect(simulation.player.state == FighterSimulation.State.IDLE, "Throw recovery eventually returns to idle")
+
+
+func _test_training_resets() -> void:
+	var simulation := CombatSimulation.new()
+	simulation.player.health = 200
+	simulation.dummy.health = 300
+	simulation.player.position.x = 100 * CombatSimulation.UNITS_PER_PIXEL
+	simulation.dummy.position.x = 1100 * CombatSimulation.UNITS_PER_PIXEL
+	simulation.reset_training_positions()
+	_expect(simulation.player.position.x == 420 * CombatSimulation.UNITS_PER_PIXEL, "Training position reset restores P1 spacing")
+	_expect(simulation.dummy.position.x == 860 * CombatSimulation.UNITS_PER_PIXEL, "Training position reset restores P2 spacing")
+	simulation.player.health = 200
+	simulation.dummy.health = 300
+	simulation.player.apply_memory_mark()
+	simulation.refill_training_state()
+	_expect(simulation.player.health == 1000 and simulation.dummy.health == 1000, "Training refill restores both health bars")
+	_expect(simulation.player.memory_mark_frames == 0, "Training refill clears character mechanics")
 
 
 func _expect(condition: bool, message: String) -> void:

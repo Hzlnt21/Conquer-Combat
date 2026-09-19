@@ -8,6 +8,9 @@ enum State {
 	AIRBORNE,
 	DASH,
 	BACKDASH,
+	GUARD_STARTUP,
+	GUARD,
+	GUARD_RECOVERY,
 	ATTACK,
 	BLOCKSTUN,
 	HITSTUN,
@@ -34,6 +37,8 @@ const EMOTIONAL_ECHO_DURATION := 360
 const RECALL_DELAY_FRAMES := 18
 const PUPPET_DELAY_FRAMES := 45
 const DELAYED_ACTIVE_FRAMES := 3
+const GUARD_STARTUP_FRAMES := 4
+const GUARD_RECOVERY_FRAMES := 10
 
 var fighter_id: StringName
 var character_id: StringName
@@ -116,14 +121,16 @@ func receive_hit(move: MoveDefinition, attacker_facing: int) -> void:
 		clear_character_mechanic()
 
 
-func receive_block(move: MoveDefinition, attacker_facing: int) -> void:
-	velocity.x = move.knockback * UNITS_PER_PIXEL * attacker_facing / 2
+func receive_block(move: MoveDefinition, attacker_facing: int, covenant_guard := false) -> void:
+	var pushback_divisor := 4 if covenant_guard else 2
+	velocity.x = move.knockback * UNITS_PER_PIXEL * attacker_facing / pushback_divisor
 	current_move = null
 	move_frame = 0
 	buffered_attack = &""
 	buffer_frames = 0
 	state = State.BLOCKSTUN
-	state_frame = maxi(4, move.hitstun - 4)
+	var normal_blockstun := maxi(4, move.hitstun - 4)
+	state_frame = maxi(3, normal_blockstun / 2) if covenant_guard else normal_blockstun
 
 
 func reset_for_round(start_position: Vector2i) -> void:

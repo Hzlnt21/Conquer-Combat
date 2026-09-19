@@ -4,7 +4,7 @@ extends Control
 const UNITS_PER_PIXEL := 1000.0
 
 var simulation: CombatSimulation
-var show_debug := true
+var show_debug := false
 
 
 func _draw() -> void:
@@ -16,7 +16,8 @@ func _draw() -> void:
 	_draw_fighter(simulation.dummy, Color("d8d1df"), Color("a54cc8"), "P2 XENON")
 	_draw_health()
 	_draw_match_status()
-	_draw_debug_text()
+	if show_debug:
+		_draw_debug_text()
 
 
 func _draw_stage() -> void:
@@ -46,6 +47,10 @@ func _draw_fighter(fighter: FighterSimulation, body_color: Color, accent: Color,
 		_draw_attack_effect(fighter, bottom, accent)
 	elif fighter.state == FighterSimulation.State.BLOCKSTUN:
 		draw_arc(bottom + Vector2(fighter.facing * 22, -90), 48, -1.4, 1.4, 16, Color("77d8ff"), 7)
+	elif fighter.state in [FighterSimulation.State.GUARD_STARTUP, FighterSimulation.State.GUARD, FighterSimulation.State.GUARD_RECOVERY]:
+		var guard_color := Color("d9fbff") if fighter.state == FighterSimulation.State.GUARD else Color("64889d")
+		draw_arc(bottom + Vector2(fighter.facing * 24, -92), 56, -1.45, 1.45, 20, guard_color, 9)
+		draw_circle(bottom + Vector2(fighter.facing * 34, -92), 7, guard_color)
 	elif fighter.state == FighterSimulation.State.KNOCKDOWN:
 		draw_line(bottom + Vector2(-48, -16), bottom + Vector2(48, -16), accent, 20)
 	_draw_delayed_effects(fighter, bottom)
@@ -78,6 +83,10 @@ func _draw_attack_effect(fighter: FighterSimulation, bottom: Vector2, accent: Co
 			draw_circle(bottom + Vector2(fighter.facing * (65 + index * 42), -105), 8, Color("e88cff"), false, 3)
 	elif "despair_puppet" in move_id:
 		draw_circle(bottom + Vector2(fighter.facing * 90, -80), 28, Color("a54cc8"), false, 7)
+	elif fighter.current_move.is_throw:
+		var grab_center := bottom + Vector2(fighter.facing * 58, -92)
+		draw_arc(grab_center, 34, -1.2, 1.2, 16, Color("ffd68a"), 8)
+		draw_circle(grab_center, 9, Color("fff1c7"), false, 4)
 	else:
 		draw_arc(arc_center, 58, -1.3 if fighter.facing > 0 else 1.8, 1.3 if fighter.facing > 0 else 4.4, 20, accent, 9)
 
@@ -143,10 +152,14 @@ func _draw_debug_text() -> void:
 	var player_two := simulation.dummy
 	var move_name_one := "none" if player_one.current_move == null else str(player_one.current_move.id)
 	var move_name_two := "none" if player_two.current_move == null else str(player_two.current_move.id)
+	var phase_one := "-" if player_one.current_move == null else str(player_one.current_move.phase_at(player_one.move_frame))
+	var phase_two := "-" if player_two.current_move == null else str(player_two.current_move.phase_at(player_two.move_frame))
+	var data_one := "-" if player_one.current_move == null else "%d/%d/%d" % [player_one.current_move.startup, player_one.current_move.active, player_one.current_move.recovery]
+	var data_two := "-" if player_two.current_move == null else "%d/%d/%d" % [player_two.current_move.startup, player_two.current_move.active, player_two.current_move.recovery]
 	var lines := [
 		"SIM %d | ROUND %d | HITSTOP %d" % [simulation.frame, simulation.round_number, simulation.hitstop_frames],
-		"P1 %s f%d | %s f%d | HP %d" % [FighterSimulation.State.keys()[player_one.state], player_one.state_frame, move_name_one, player_one.move_frame, player_one.health],
-		"P2 %s f%d | %s f%d | HP %d" % [FighterSimulation.State.keys()[player_two.state], player_two.state_frame, move_name_two, player_two.move_frame, player_two.health],
+		"P1 %s f%d | %s %s f%d [%s] | HP %d" % [FighterSimulation.State.keys()[player_one.state], player_one.state_frame, move_name_one, phase_one, player_one.move_frame, data_one, player_one.health],
+		"P2 %s f%d | %s %s f%d [%s] | HP %d" % [FighterSimulation.State.keys()[player_two.state], player_two.state_frame, move_name_two, phase_two, player_two.move_frame, data_two, player_two.health],
 		"P1 POS %d,%d | P2 POS %d,%d" % [player_one.position.x / 1000, player_one.position.y / 1000, player_two.position.x / 1000, player_two.position.y / 1000],
 		"MEMORY %d RECALL %d | ECHO %d (%d) PUPPET %d" % [player_one.memory_mark_frames, player_one.recall_delay_frames, player_two.emotional_echo_tokens, player_two.emotional_echo_frames, player_two.puppet_delay_frames],
 	]

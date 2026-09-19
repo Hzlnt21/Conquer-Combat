@@ -16,7 +16,7 @@ var last_tap_frame := {
 
 func _ready() -> void:
 	combat_view.simulation = simulation
-	phase_label.text = "P1 A/D W S J/K/L/I | P2 arrows 1/2/3/4 | direction + Special | R reset"
+	phase_label.text = "P1 J/K/L/I/U/O | P2 1/2/3/4/5/6 | F1 debug | F2 positions | F3 refill"
 	print("Conquer Combat v0.1c character contrast foundation loaded.")
 
 
@@ -35,6 +35,10 @@ func _unhandled_key_input(event: InputEvent) -> void:
 	elif event.keycode == KEY_F1:
 		combat_view.show_debug = not combat_view.show_debug
 		combat_view.queue_redraw()
+	elif event.keycode == KEY_F2:
+		simulation.reset_training_positions()
+	elif event.keycode == KEY_F3:
+		simulation.refill_training_state()
 
 
 func _capture_player_one() -> FrameInput:
@@ -49,8 +53,10 @@ func _capture_player_one() -> FrameInput:
 	result.medium_pressed = _just_pressed(KEY_K) or _joy_just_pressed(0, JOY_BUTTON_Y)
 	result.heavy_pressed = _just_pressed(KEY_L) or _joy_just_pressed(0, JOY_BUTTON_B)
 	result.special_pressed = _just_pressed(KEY_I) or _joy_just_pressed(0, JOY_BUTTON_A)
+	result.guard_held = Input.is_key_pressed(KEY_U) or Input.is_joy_button_pressed(0, JOY_BUTTON_LEFT_SHOULDER)
+	result.throw_pressed = _just_pressed(KEY_O) or _joy_just_pressed(0, JOY_BUTTON_RIGHT_SHOULDER)
 	_apply_double_tap(result, left_pressed, right_pressed, simulation.player.facing, &"p1_left", &"p1_right")
-	_update_previous_keys([KEY_A, KEY_D, KEY_J, KEY_K, KEY_L, KEY_I])
+	_update_previous_keys([KEY_A, KEY_D, KEY_J, KEY_K, KEY_L, KEY_I, KEY_U, KEY_O])
 	return result
 
 
@@ -66,8 +72,10 @@ func _capture_player_two() -> FrameInput:
 	result.medium_pressed = _just_pressed(KEY_2) or _joy_just_pressed(1, JOY_BUTTON_Y)
 	result.heavy_pressed = _just_pressed(KEY_3) or _joy_just_pressed(1, JOY_BUTTON_B)
 	result.special_pressed = _just_pressed(KEY_4) or _joy_just_pressed(1, JOY_BUTTON_A)
+	result.guard_held = Input.is_key_pressed(KEY_5) or Input.is_joy_button_pressed(1, JOY_BUTTON_LEFT_SHOULDER)
+	result.throw_pressed = _just_pressed(KEY_6) or _joy_just_pressed(1, JOY_BUTTON_RIGHT_SHOULDER)
 	_apply_double_tap(result, left_pressed, right_pressed, simulation.dummy.facing, &"p2_left", &"p2_right")
-	_update_previous_keys([KEY_LEFT, KEY_RIGHT, KEY_1, KEY_2, KEY_3, KEY_4])
+	_update_previous_keys([KEY_LEFT, KEY_RIGHT, KEY_1, KEY_2, KEY_3, KEY_4, KEY_5, KEY_6])
 	return result
 
 

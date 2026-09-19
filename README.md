@@ -2,7 +2,7 @@
 
 Prototype fighting game 2D untuk browser dan Windows, dibuat dengan Godot 4.6.3 Standard dan GDScript.
 
-Status saat ini: milestone v0.1c character contrast selesai dan Izuna production gate telah tervalidasi.
+Status saat ini: milestone v0.1d defensive slice selesai dan Izuna production gate telah tervalidasi.
 
 Prototype saat ini memiliki:
 
@@ -15,6 +15,7 @@ Prototype saat ini memiliki:
 - Memory Mark/Recall Izuna dan Emotional Echo/Despair Puppet Xenon telah berjalan di simulation.
 - Tiga special placeholder per karakter: Recall Slash, Foxfire Step, Memory Break, Laughing Chain, Mocking Step, dan Despair Puppet.
 - Basic cancel route pada hit atau block: `Light -> Medium -> Heavy -> Special`.
+- Covenant Guard, ground throw, training reset, dan frame-data debug readout.
 - Keyboard dua pemain dan basic controller mapping.
 - Debug overlay serta reset dengan tombol `R`.
 - Web export dan headless regression tests.
@@ -34,15 +35,20 @@ Prototype saat ini memiliki:
 | Medium | `K` | `2` | Y / Triangle |
 | Heavy | `L` | `3` | B / Circle |
 | Special | `I` | `4` | A / Cross |
+| Covenant Guard | `U` | `5` | Left shoulder |
+| Throw | `O` | `6` | Right shoulder |
 | Reset match | `R` | `R` | - |
 | Debug overlay | `F1` | `F1` | - |
+| Training reset | `F2` | `F2` | - |
+| Refill health/resources | `F3` | `F3` | - |
 
-Special dipilih dengan arah yang sedang ditahan: tanpa arah untuk Neutral Special, arah maju untuk Forward Special, dan bawah untuk Down Special. Normal block dilakukan dengan menahan arah menjauh dari lawan.
+Special dipilih dengan arah yang sedang ditahan: tanpa arah untuk Neutral Special, arah maju untuk Forward Special, dan bawah untuk Down Special. Normal block dilakukan dengan menahan arah menjauh dari lawan. Covenant Guard memiliki startup dan recovery, mengurangi blockstun serta pushback, tetapi tetap kalah terhadap Throw.
 
 ## Dokumen
 
 - Game Design Document: `docs/GDD.md`
 - Technical Design Document: `docs/TECHNICAL_DESIGN.md`
+- Web Performance Baseline: `docs/WEB_PERFORMANCE_BASELINE.md`
 - Izuna Visual Brief: `docs/VISUAL_BRIEF_IZUNA.md`
 - Izuna Production Package: `docs/production/IZUNA_PRODUCTION_PACKAGE.md`
 

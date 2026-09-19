@@ -392,3 +392,17 @@ Yang masih tersisa sebelum v0.1a dianggap gameplay-complete:
 - Headless regression suite mencakup 61 assertions untuk core combat, character mechanics, special selection, delayed effects, dan cancel routes.
 
 Milestone v0.1c dianggap implementation-complete. Angka frame, jarak, damage, invulnerability khusus, serta variasi follow-up tetap provisional dan masuk playtest atau milestone lanjutan.
+
+### v0.1d defensive slice
+
+- Covenant Guard memiliki startup empat frame, active hold, dan recovery sepuluh frame.
+- Guard aktif mengurangi blockstun dan pushback tanpa memberi parry atau counter otomatis.
+- Ground throw memiliki startup, active window, punishable whiff recovery, fixed damage, dan soft knockdown.
+- Throw mengabaikan normal block serta Covenant Guard, tetapi tidak mengenai lawan airborne.
+- `F2` mengembalikan neutral training spacing dan `F3` mengisi health serta membersihkan mechanic state.
+- Debug overlay menampilkan current move phase dan frame data startup/active/recovery.
+- Debug overlay disembunyikan secara default dan dapat dibuka dengan `F1`.
+- Headless regression suite mencakup 78 assertions.
+- Web release berhasil dirender melalui HTTP lokal di Chromium; baseline payload awal adalah 42.96 MiB.
+
+Milestone v0.1d implementation-complete. Throw escape tetap wajib sebelum public v1.0 sesuai GDD.

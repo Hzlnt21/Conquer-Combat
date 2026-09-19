@@ -13,6 +13,7 @@ var height: int
 var knockback: int
 var causes_knockdown: bool
 var travel_per_frame: int
+var is_throw: bool
 
 
 func _init(
@@ -27,7 +28,8 @@ func _init(
 	move_height: int,
 	move_knockback: int,
 	move_causes_knockdown := false,
-	move_travel_per_frame := 0
+	move_travel_per_frame := 0,
+	move_is_throw := false
 ) -> void:
 	id = move_id
 	startup = startup_frames
@@ -41,10 +43,19 @@ func _init(
 	knockback = move_knockback
 	causes_knockdown = move_causes_knockdown
 	travel_per_frame = move_travel_per_frame
+	is_throw = move_is_throw
 
 
 func total_frames() -> int:
 	return startup + active + recovery
+
+
+func phase_at(frame: int) -> StringName:
+	if frame < startup:
+		return &"startup"
+	if frame < startup + active:
+		return &"active"
+	return &"recovery"
 
 
 func is_active(frame: int) -> bool:

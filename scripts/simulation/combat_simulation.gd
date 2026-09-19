@@ -35,6 +35,7 @@ func _init() -> void:
 		&"special_neutral": MoveDefinition.new(&"izuna_recall_slash", 11, 4, 20, 80, 8, 20, 135, 138, 5),
 		&"special_forward": MoveDefinition.new(&"izuna_foxfire_step", 13, 5, 22, 95, 8, 22, 170, 134, 7, false, 7),
 		&"special_down": MoveDefinition.new(&"izuna_memory_break", 8, 5, 28, 90, 8, 24, 96, 190, 6, true),
+		&"throw": MoveDefinition.new(&"izuna_forgotten_oath", 6, 2, 24, 120, 7, 20, 54, 176, 5, true, 0, true),
 		&"recall_strike": MoveDefinition.new(&"izuna_recall_strike", 0, 3, 0, 45, 6, 16, 220, 150, 4),
 	}
 	move_sets[&"xenon"] = {
@@ -44,6 +45,7 @@ func _init() -> void:
 		&"special_neutral": MoveDefinition.new(&"xenon_laughing_chain", 14, 4, 23, 85, 8, 21, 220, 126, 5),
 		&"special_forward": MoveDefinition.new(&"xenon_mocking_step", 12, 4, 24, 65, 7, 18, 150, 130, 4, false, 5),
 		&"special_down": MoveDefinition.new(&"xenon_despair_puppet", 12, 1, 20, 0, 0, 0, 0, 0, 0),
+		&"throw": MoveDefinition.new(&"xenon_shared_misery", 7, 2, 25, 125, 7, 21, 56, 176, 6, true, 0, true),
 		&"puppet_strike": MoveDefinition.new(&"xenon_puppet_strike", 0, 3, 0, 55, 6, 17, 120, 130, 4),
 	}
 	reset()
@@ -97,8 +99,29 @@ func displayed_timer() -> int:
 	return ceili(round_timer_frames / 60.0)
 
 
+func reset_training_positions() -> void:
+	hitstop_frames = 0
+	match_state = MatchState.FIGHTING
+	round_timer_frames = ROUND_TIME_FRAMES
+	player.reset_for_round(Vector2i(420 * UNITS_PER_PIXEL, GROUND_Y))
+	dummy.reset_for_round(Vector2i(860 * UNITS_PER_PIXEL, GROUND_Y))
+	_update_facing()
+	events.append({"type": &"training_reset", "scope": &"positions"})
+
+
+func refill_training_state() -> void:
+	player.health = 1000
+	dummy.health = 1000
+	player.clear_character_mechanic()
+	dummy.clear_character_mechanic()
+	round_timer_frames = ROUND_TIME_FRAMES
+	events.append({"type": &"training_reset", "scope": &"resources"})
+
+
 func _capture_attack_input(fighter: FighterSimulation, input: FrameInput) -> void:
-	if input.light_pressed:
+	if input.throw_pressed:
+		fighter.queue_attack(&"throw")
+	elif input.light_pressed:
 		fighter.queue_attack(&"light")
 	elif input.medium_pressed:
 		fighter.queue_attack(&"medium")
@@ -130,6 +153,26 @@ func _tick_fighter(fighter: FighterSimulation, input: FrameInput) -> void:
 		fighter.position.x += fighter.velocity.x
 		fighter.velocity.x = move_toward(fighter.velocity.x, 0, 1000)
 		if fighter.state_frame <= 0:
+			_set_state(fighter, FighterSimulation.State.IDLE)
+		return
+
+	if fighter.state == FighterSimulation.State.GUARD_STARTUP:
+		if not input.guard_held:
+			_set_state(fighter, FighterSimulation.State.GUARD_RECOVERY)
+			return
+		fighter.state_frame += 1
+		if fighter.state_frame >= FighterSimulation.GUARD_STARTUP_FRAMES:
+			_set_state(fighter, FighterSimulation.State.GUARD)
+		return
+
+	if fighter.state == FighterSimulation.State.GUARD:
+		if not input.guard_held:
+			_set_state(fighter, FighterSimulation.State.GUARD_RECOVERY)
+		return
+
+	if fighter.state == FighterSimulation.State.GUARD_RECOVERY:
+		fighter.state_frame += 1
+		if fighter.state_frame >= FighterSimulation.GUARD_RECOVERY_FRAMES:
 			_set_state(fighter, FighterSimulation.State.IDLE)
 		return
 
@@ -186,6 +229,10 @@ func _tick_fighter(fighter: FighterSimulation, input: FrameInput) -> void:
 			fighter.start_move(move)
 			events.append({"type": &"attack_started", "fighter": fighter.fighter_id, "move": move.id})
 			return
+
+	if input.guard_held:
+		_set_state(fighter, FighterSimulation.State.GUARD_STARTUP)
+		return
 
 	if input.dash_forward_pressed:
 		_set_state(fighter, FighterSimulation.State.DASH)
@@ -254,8 +301,9 @@ func _resolve_attacks(input_one: FrameInput, input_two: FrameInput) -> void:
 		var move: MoveDefinition = candidate.move
 		var defender_was_attacking := defender.state == FighterSimulation.State.ATTACK
 		if candidate.blocked:
-			defender.receive_block(move, attacker.facing)
-			events.append({"type": &"attack_blocked", "player": candidate.player, "move": move.id})
+			var covenant_guard := defender.state == FighterSimulation.State.GUARD
+			defender.receive_block(move, attacker.facing, covenant_guard)
+			events.append({"type": &"attack_blocked", "player": candidate.player, "move": move.id, "covenant_guard": covenant_guard})
 		else:
 			defender.receive_hit(move, attacker.facing)
 			if move.id == &"xenon_laughing_chain":
@@ -298,11 +346,13 @@ func _collect_attack_candidate(
 	var attack_rect := attacker.attack_rect()
 	if not attack_rect.has_area() or not attack_rect.intersects(defender.body_rect()):
 		return
+	if attacker.current_move.is_throw and not defender.is_grounded(GROUND_Y):
+		return
 	candidates.append({
 		"attacker": attacker,
 		"defender": defender,
 		"move": attacker.current_move,
-		"blocked": _is_blocking(defender, defender_input),
+		"blocked": false if attacker.current_move.is_throw else _is_blocking(defender, defender_input),
 		"player": player_number,
 		"source": &"move",
 	})
@@ -335,6 +385,8 @@ func _collect_delayed_candidate(
 
 
 func _is_blocking(fighter: FighterSimulation, input: FrameInput) -> bool:
+	if fighter.state == FighterSimulation.State.GUARD:
+		return true
 	if fighter.state not in [FighterSimulation.State.IDLE, FighterSimulation.State.WALK, FighterSimulation.State.CROUCH, FighterSimulation.State.BLOCKSTUN]:
 		return false
 	var holding_away := input.horizontal_axis() == -fighter.facing
