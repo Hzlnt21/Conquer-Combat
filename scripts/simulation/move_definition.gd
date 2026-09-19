@@ -12,6 +12,7 @@ var reach: int
 var height: int
 var knockback: int
 var causes_knockdown: bool
+var travel_per_frame: int
 
 
 func _init(
@@ -25,7 +26,8 @@ func _init(
 	move_reach: int,
 	move_height: int,
 	move_knockback: int,
-	move_causes_knockdown := false
+	move_causes_knockdown := false,
+	move_travel_per_frame := 0
 ) -> void:
 	id = move_id
 	startup = startup_frames
@@ -38,6 +40,7 @@ func _init(
 	height = move_height
 	knockback = move_knockback
 	causes_knockdown = move_causes_knockdown
+	travel_per_frame = move_travel_per_frame
 
 
 func total_frames() -> int:

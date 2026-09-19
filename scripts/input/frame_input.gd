@@ -11,6 +11,7 @@ var guard_held := false
 var light_pressed := false
 var medium_pressed := false
 var heavy_pressed := false
+var special_pressed := false
 
 
 func horizontal_axis() -> int:

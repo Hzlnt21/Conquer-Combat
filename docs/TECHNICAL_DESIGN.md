@@ -1,6 +1,6 @@
 # Conquer Combat - Technical Design Document
 
-**Document version:** 0.3  
+**Document version:** 0.4<br>
 **Engine:** Godot 4.6.3 Standard  
 **Language:** GDScript  
 **Renderer:** GL Compatibility  
@@ -382,4 +382,13 @@ Yang masih tersisa sebelum v0.1a dianggap gameplay-complete:
 - Xenon Medium memperoleh Emotional Echo ketika diblok atau mengenai counter-hit.
 - Memory Mark dan Emotional Echo dibersihkan saat pemiliknya terkena knockdown.
 - Presentation placeholder menampilkan identity serta debug state kedua mechanic.
-- Specials, Recall, Puppet activation, dan combo routes masih menjadi pekerjaan berikutnya.
+- Tiga special placeholder tersedia untuk setiap karakter melalui Neutral, Forward, dan Down + Special.
+- Recall Slash dapat mengonsumsi Memory Mark untuk membuat delayed strike.
+- Despair Puppet memerlukan Emotional Echo, menyerang setelah fixed delay, dan hilang jika Xenon terkena hit.
+- Foxfire Step dan Mocking Step menggunakan deterministic per-frame travel di simulation.
+- Laughing Chain menarik lawan ke arah Xenon ketika mengenai target.
+- Universal cancel route pada hit atau block adalah Light ke Medium/Special, Medium ke Heavy/Special, dan Heavy ke Special.
+- Input serangan tetap dapat masuk ke buffer selama hitstop.
+- Headless regression suite mencakup 61 assertions untuk core combat, character mechanics, special selection, delayed effects, dan cancel routes.
+
+Milestone v0.1c dianggap implementation-complete. Angka frame, jarak, damage, invulnerability khusus, serta variasi follow-up tetap provisional dan masuk playtest atau milestone lanjutan.

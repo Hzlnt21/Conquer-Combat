@@ -16,7 +16,7 @@ var last_tap_frame := {
 
 func _ready() -> void:
 	combat_view.simulation = simulation
-	phase_label.text = "P1 A/D W S J/K/L | P2 arrows 1/2/3 | hold away to block | R reset"
+	phase_label.text = "P1 A/D W S J/K/L/I | P2 arrows 1/2/3/4 | direction + Special | R reset"
 	print("Conquer Combat v0.1c character contrast foundation loaded.")
 
 
@@ -48,8 +48,9 @@ func _capture_player_one() -> FrameInput:
 	result.light_pressed = _just_pressed(KEY_J) or _joy_just_pressed(0, JOY_BUTTON_X)
 	result.medium_pressed = _just_pressed(KEY_K) or _joy_just_pressed(0, JOY_BUTTON_Y)
 	result.heavy_pressed = _just_pressed(KEY_L) or _joy_just_pressed(0, JOY_BUTTON_B)
+	result.special_pressed = _just_pressed(KEY_I) or _joy_just_pressed(0, JOY_BUTTON_A)
 	_apply_double_tap(result, left_pressed, right_pressed, simulation.player.facing, &"p1_left", &"p1_right")
-	_update_previous_keys([KEY_A, KEY_D, KEY_J, KEY_K, KEY_L])
+	_update_previous_keys([KEY_A, KEY_D, KEY_J, KEY_K, KEY_L, KEY_I])
 	return result
 
 
@@ -64,8 +65,9 @@ func _capture_player_two() -> FrameInput:
 	result.light_pressed = _just_pressed(KEY_1) or _joy_just_pressed(1, JOY_BUTTON_X)
 	result.medium_pressed = _just_pressed(KEY_2) or _joy_just_pressed(1, JOY_BUTTON_Y)
 	result.heavy_pressed = _just_pressed(KEY_3) or _joy_just_pressed(1, JOY_BUTTON_B)
+	result.special_pressed = _just_pressed(KEY_4) or _joy_just_pressed(1, JOY_BUTTON_A)
 	_apply_double_tap(result, left_pressed, right_pressed, simulation.dummy.facing, &"p2_left", &"p2_right")
-	_update_previous_keys([KEY_LEFT, KEY_RIGHT, KEY_1, KEY_2, KEY_3])
+	_update_previous_keys([KEY_LEFT, KEY_RIGHT, KEY_1, KEY_2, KEY_3, KEY_4])
 	return result
 
 

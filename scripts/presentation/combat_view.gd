@@ -43,12 +43,12 @@ func _draw_fighter(fighter: FighterSimulation, body_color: Color, accent: Color,
 	draw_line(sword_origin, sword_tip, accent, 8)
 
 	if fighter.state == FighterSimulation.State.ATTACK and fighter.current_move != null:
-		var arc_center := bottom + Vector2(fighter.facing * 70, -108)
-		draw_arc(arc_center, 58, -1.3 if fighter.facing > 0 else 1.8, 1.3 if fighter.facing > 0 else 4.4, 20, accent, 9)
+		_draw_attack_effect(fighter, bottom, accent)
 	elif fighter.state == FighterSimulation.State.BLOCKSTUN:
 		draw_arc(bottom + Vector2(fighter.facing * 22, -90), 48, -1.4, 1.4, 16, Color("77d8ff"), 7)
 	elif fighter.state == FighterSimulation.State.KNOCKDOWN:
 		draw_line(bottom + Vector2(-48, -16), bottom + Vector2(48, -16), accent, 20)
+	_draw_delayed_effects(fighter, bottom)
 
 	draw_string(ThemeDB.fallback_font, body.position + Vector2(0, -10), label, HORIZONTAL_ALIGNMENT_LEFT, -1, 16, body_color)
 
@@ -57,6 +57,46 @@ func _draw_fighter(fighter: FighterSimulation, body_color: Color, accent: Color,
 		var attack_rect := fighter.attack_rect()
 		if attack_rect.has_area():
 			draw_rect(_to_screen_rect(attack_rect), Color("ff405d"), false, 3)
+		var recall_rect := fighter.recall_rect()
+		if recall_rect.has_area():
+			draw_rect(_to_screen_rect(recall_rect), Color("fff0d1"), false, 3)
+		var puppet_rect := fighter.puppet_rect()
+		if puppet_rect.has_area():
+			draw_rect(_to_screen_rect(puppet_rect), Color("ee72ff"), false, 3)
+
+
+func _draw_attack_effect(fighter: FighterSimulation, bottom: Vector2, accent: Color) -> void:
+	var move_id := str(fighter.current_move.id)
+	var arc_center := bottom + Vector2(fighter.facing * 70, -108)
+	if "foxfire_step" in move_id or "mocking_step" in move_id:
+		draw_line(bottom + Vector2(-fighter.facing * 55, -80), bottom + Vector2(fighter.facing * 125, -100), accent, 14)
+	elif "memory_break" in move_id:
+		draw_arc(bottom + Vector2(0, -120), 72, PI, TAU, 24, Color("fff0d1"), 11)
+	elif "laughing_chain" in move_id:
+		draw_line(bottom + Vector2(fighter.facing * 20, -100), bottom + Vector2(fighter.facing * 215, -105), accent, 7)
+		for index in range(4):
+			draw_circle(bottom + Vector2(fighter.facing * (65 + index * 42), -105), 8, Color("e88cff"), false, 3)
+	elif "despair_puppet" in move_id:
+		draw_circle(bottom + Vector2(fighter.facing * 90, -80), 28, Color("a54cc8"), false, 7)
+	else:
+		draw_arc(arc_center, 58, -1.3 if fighter.facing > 0 else 1.8, 1.3 if fighter.facing > 0 else 4.4, 20, accent, 9)
+
+
+
+func _draw_delayed_effects(fighter: FighterSimulation, bottom: Vector2) -> void:
+	if fighter.recall_delay_frames > 0:
+		var recall_alpha := 0.35 + 0.35 * sin(float(fighter.recall_delay_frames))
+		draw_arc(bottom + Vector2(fighter.facing * 125, -105), 52, 0, TAU, 24, Color(1.0, 0.85, 0.72, recall_alpha), 5)
+	elif fighter.recall_active_frames > 0:
+		draw_arc(bottom + Vector2(fighter.facing * 125, -105), 70, -1.4, 1.4, 24, Color("fff0d1"), 12)
+	if fighter.puppet_delay_frames > 0:
+		var puppet_position := bottom + Vector2(fighter.facing * 180, -85)
+		draw_circle(puppet_position, 24, Color("8f3ca8"))
+		draw_circle(puppet_position, 14, Color("e88cff"), false, 4)
+	elif fighter.puppet_active_frames > 0:
+		var puppet_position := bottom + Vector2(fighter.facing * 180, -85)
+		draw_circle(puppet_position, 42, Color("e88cff"))
+		draw_arc(puppet_position, 52, 0, TAU, 28, Color("fff0ff"), 7)
 
 
 func _draw_health() -> void:
@@ -108,7 +148,7 @@ func _draw_debug_text() -> void:
 		"P1 %s f%d | %s f%d | HP %d" % [FighterSimulation.State.keys()[player_one.state], player_one.state_frame, move_name_one, player_one.move_frame, player_one.health],
 		"P2 %s f%d | %s f%d | HP %d" % [FighterSimulation.State.keys()[player_two.state], player_two.state_frame, move_name_two, player_two.move_frame, player_two.health],
 		"P1 POS %d,%d | P2 POS %d,%d" % [player_one.position.x / 1000, player_one.position.y / 1000, player_two.position.x / 1000, player_two.position.y / 1000],
-		"MEMORY %d | ECHO %d (%d)" % [player_one.memory_mark_frames, player_two.emotional_echo_tokens, player_two.emotional_echo_frames],
+		"MEMORY %d RECALL %d | ECHO %d (%d) PUPPET %d" % [player_one.memory_mark_frames, player_one.recall_delay_frames, player_two.emotional_echo_tokens, player_two.emotional_echo_frames, player_two.puppet_delay_frames],
 	]
 	for index in lines.size():
 		draw_string(ThemeDB.fallback_font, Vector2(24, 642 + index * 15), lines[index], HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color("c9bdcf"))

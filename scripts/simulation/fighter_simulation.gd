@@ -31,6 +31,9 @@ const INPUT_BUFFER_FRAMES := 5
 const KNOCKDOWN_FRAMES := 72
 const MEMORY_MARK_DURATION := 300
 const EMOTIONAL_ECHO_DURATION := 360
+const RECALL_DELAY_FRAMES := 18
+const PUPPET_DELAY_FRAMES := 45
+const DELAYED_ACTIVE_FRAMES := 3
 
 var fighter_id: StringName
 var character_id: StringName
@@ -50,6 +53,12 @@ var backdash_speed := BACKDASH_SPEED
 var memory_mark_frames := 0
 var emotional_echo_tokens := 0
 var emotional_echo_frames := 0
+var recall_delay_frames := 0
+var recall_active_frames := 0
+var recall_has_hit := false
+var puppet_delay_frames := 0
+var puppet_active_frames := 0
+var puppet_has_hit := false
 
 var current_move: MoveDefinition
 var move_frame := 0
@@ -98,6 +107,8 @@ func receive_hit(move: MoveDefinition, attacker_facing: int) -> void:
 	buffer_frames = 0
 	state_frame = 0
 	state = State.KO if health == 0 else State.KNOCKDOWN if move.causes_knockdown else State.HITSTUN
+	if character_id == &"xenon":
+		clear_puppet()
 	if state == State.HITSTUN:
 		state_frame = move.hitstun
 	elif state == State.KNOCKDOWN:
@@ -142,6 +153,27 @@ func grant_emotional_echo() -> void:
 	emotional_echo_frames = EMOTIONAL_ECHO_DURATION
 
 
+func consume_memory_mark_for_recall() -> bool:
+	if character_id != &"izuna" or memory_mark_frames <= 0:
+		return false
+	memory_mark_frames = 0
+	recall_delay_frames = RECALL_DELAY_FRAMES
+	recall_active_frames = 0
+	recall_has_hit = false
+	return true
+
+
+func consume_echo_for_puppet() -> bool:
+	if character_id != &"xenon" or emotional_echo_tokens <= 0 or puppet_delay_frames > 0 or puppet_active_frames > 0:
+		return false
+	emotional_echo_tokens = 0
+	emotional_echo_frames = 0
+	puppet_delay_frames = PUPPET_DELAY_FRAMES
+	puppet_active_frames = 0
+	puppet_has_hit = false
+	return true
+
+
 func tick_character_mechanic() -> void:
 	if memory_mark_frames > 0:
 		memory_mark_frames -= 1
@@ -149,12 +181,34 @@ func tick_character_mechanic() -> void:
 		emotional_echo_frames -= 1
 		if emotional_echo_frames == 0:
 			emotional_echo_tokens = 0
+	if recall_delay_frames > 0:
+		recall_delay_frames -= 1
+		if recall_delay_frames == 0:
+			recall_active_frames = DELAYED_ACTIVE_FRAMES
+	elif recall_active_frames > 0:
+		recall_active_frames -= 1
+	if puppet_delay_frames > 0:
+		puppet_delay_frames -= 1
+		if puppet_delay_frames == 0:
+			puppet_active_frames = DELAYED_ACTIVE_FRAMES
+	elif puppet_active_frames > 0:
+		puppet_active_frames -= 1
 
 
 func clear_character_mechanic() -> void:
 	memory_mark_frames = 0
 	emotional_echo_tokens = 0
 	emotional_echo_frames = 0
+	recall_delay_frames = 0
+	recall_active_frames = 0
+	recall_has_hit = false
+	clear_puppet()
+
+
+func clear_puppet() -> void:
+	puppet_delay_frames = 0
+	puppet_active_frames = 0
+	puppet_has_hit = false
 
 
 func body_rect() -> Rect2i:
@@ -174,6 +228,24 @@ func attack_rect() -> Rect2i:
 	var height := current_move.height * UNITS_PER_PIXEL
 	var left := position.x + BODY_HALF_WIDTH if facing > 0 else position.x - BODY_HALF_WIDTH - width
 	return Rect2i(left, position.y - height, width, height)
+
+
+func recall_rect() -> Rect2i:
+	if recall_active_frames <= 0:
+		return Rect2i()
+	var width := 220 * UNITS_PER_PIXEL
+	var height := 150 * UNITS_PER_PIXEL
+	var left := position.x + BODY_HALF_WIDTH if facing > 0 else position.x - BODY_HALF_WIDTH - width
+	return Rect2i(left, position.y - height, width, height)
+
+
+func puppet_rect() -> Rect2i:
+	if puppet_active_frames <= 0:
+		return Rect2i()
+	var width := 120 * UNITS_PER_PIXEL
+	var height := 130 * UNITS_PER_PIXEL
+	var center_x := position.x + facing * 180 * UNITS_PER_PIXEL
+	return Rect2i(center_x - width / 2, position.y - height, width, height)
 
 
 func is_grounded(ground_y: int) -> bool:

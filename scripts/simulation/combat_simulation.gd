@@ -32,11 +32,19 @@ func _init() -> void:
 		&"light": MoveDefinition.new(&"izuna_light", 5, 3, 10, 40, 5, 12, 72, 118, 2),
 		&"medium": MoveDefinition.new(&"izuna_medium", 9, 4, 15, 70, 7, 17, 108, 132, 4),
 		&"heavy": MoveDefinition.new(&"izuna_heavy", 14, 5, 22, 110, 9, 24, 148, 150, 8, true),
+		&"special_neutral": MoveDefinition.new(&"izuna_recall_slash", 11, 4, 20, 80, 8, 20, 135, 138, 5),
+		&"special_forward": MoveDefinition.new(&"izuna_foxfire_step", 13, 5, 22, 95, 8, 22, 170, 134, 7, false, 7),
+		&"special_down": MoveDefinition.new(&"izuna_memory_break", 8, 5, 28, 90, 8, 24, 96, 190, 6, true),
+		&"recall_strike": MoveDefinition.new(&"izuna_recall_strike", 0, 3, 0, 45, 6, 16, 220, 150, 4),
 	}
 	move_sets[&"xenon"] = {
 		&"light": MoveDefinition.new(&"xenon_light", 6, 3, 11, 35, 5, 11, 76, 116, 2),
 		&"medium": MoveDefinition.new(&"xenon_medium", 10, 4, 17, 75, 7, 18, 142, 130, 5),
 		&"heavy": MoveDefinition.new(&"xenon_heavy", 16, 5, 24, 115, 9, 25, 176, 148, 9, true),
+		&"special_neutral": MoveDefinition.new(&"xenon_laughing_chain", 14, 4, 23, 85, 8, 21, 220, 126, 5),
+		&"special_forward": MoveDefinition.new(&"xenon_mocking_step", 12, 4, 24, 65, 7, 18, 150, 130, 4, false, 5),
+		&"special_down": MoveDefinition.new(&"xenon_despair_puppet", 12, 1, 20, 0, 0, 0, 0, 0, 0),
+		&"puppet_strike": MoveDefinition.new(&"xenon_puppet_strike", 0, 3, 0, 55, 6, 17, 120, 130, 4),
 	}
 	reset()
 
@@ -66,6 +74,8 @@ func tick(input_one: FrameInput, input_two: FrameInput = null) -> void:
 		_tick_round_flow()
 		return
 
+	_capture_attack_input(player, input_one)
+	_capture_attack_input(dummy, input_two)
 	if hitstop_frames > 0:
 		hitstop_frames -= 1
 		return
@@ -73,8 +83,6 @@ func tick(input_one: FrameInput, input_two: FrameInput = null) -> void:
 	player.tick_character_mechanic()
 	dummy.tick_character_mechanic()
 	round_timer_frames = maxi(0, round_timer_frames - 1)
-	_capture_attack_input(player, input_one)
-	_capture_attack_input(dummy, input_two)
 	_update_facing()
 	_tick_fighter(player, input_one)
 	_tick_fighter(dummy, input_two)
@@ -96,6 +104,13 @@ func _capture_attack_input(fighter: FighterSimulation, input: FrameInput) -> voi
 		fighter.queue_attack(&"medium")
 	elif input.heavy_pressed:
 		fighter.queue_attack(&"heavy")
+	elif input.special_pressed:
+		var special_action := &"special_neutral"
+		if input.down:
+			special_action = &"special_down"
+		elif input.horizontal_axis() == fighter.facing:
+			special_action = &"special_forward"
+		fighter.queue_attack(special_action)
 
 
 func _tick_fighter(fighter: FighterSimulation, input: FrameInput) -> void:
@@ -119,7 +134,17 @@ func _tick_fighter(fighter: FighterSimulation, input: FrameInput) -> void:
 		return
 
 	if fighter.state == FighterSimulation.State.ATTACK:
+		if fighter.buffer_frames > 0 and fighter.move_has_hit and _can_cancel(fighter.current_move, fighter.buffered_attack):
+			var cancel_action := fighter.buffered_attack
+			var cancel_move := _move_for(fighter, cancel_action)
+			if cancel_move != null and _can_start_action(fighter, cancel_action):
+				_prepare_action(fighter, cancel_action)
+				fighter.start_move(cancel_move)
+				events.append({"type": &"attack_started", "fighter": fighter.fighter_id, "move": cancel_move.id, "cancel": true})
+				return
 		fighter.move_frame += 1
+		if fighter.current_move.travel_per_frame != 0 and fighter.move_frame < fighter.current_move.startup + fighter.current_move.active:
+			fighter.position.x += fighter.facing * fighter.current_move.travel_per_frame * UNITS_PER_PIXEL
 		if fighter.move_frame >= fighter.current_move.total_frames():
 			fighter.current_move = null
 			_set_state(fighter, FighterSimulation.State.IDLE)
@@ -154,8 +179,10 @@ func _tick_fighter(fighter: FighterSimulation, input: FrameInput) -> void:
 		return
 
 	if fighter.buffer_frames > 0 and fighter.can_start_attack():
-		var move: MoveDefinition = _move_for(fighter, fighter.buffered_attack)
-		if move != null:
+		var action := fighter.buffered_attack
+		var move: MoveDefinition = _move_for(fighter, action)
+		if move != null and _can_start_action(fighter, action):
+			_prepare_action(fighter, action)
 			fighter.start_move(move)
 			events.append({"type": &"attack_started", "fighter": fighter.fighter_id, "move": move.id})
 			return
@@ -202,14 +229,28 @@ func _resolve_attacks(input_one: FrameInput, input_two: FrameInput) -> void:
 	var candidates: Array[Dictionary] = []
 	_collect_attack_candidate(candidates, player, dummy, input_two, 1)
 	_collect_attack_candidate(candidates, dummy, player, input_one, 2)
+	_collect_delayed_candidate(candidates, player, dummy, input_two, 1, &"recall")
+	_collect_delayed_candidate(candidates, dummy, player, input_one, 2, &"recall")
+	_collect_delayed_candidate(candidates, player, dummy, input_two, 1, &"puppet")
+	_collect_delayed_candidate(candidates, dummy, player, input_one, 2, &"puppet")
 
 	for candidate in candidates:
 		var attacker: FighterSimulation = candidate.attacker
 		var defender: FighterSimulation = candidate.defender
-		if attacker.move_has_hit:
+		var source: StringName = candidate.get("source", &"move")
+		if source == &"move" and attacker.move_has_hit:
+			continue
+		if source == &"recall" and attacker.recall_has_hit:
+			continue
+		if source == &"puppet" and attacker.puppet_has_hit:
 			continue
 
-		attacker.move_has_hit = true
+		if source == &"move":
+			attacker.move_has_hit = true
+		elif source == &"recall":
+			attacker.recall_has_hit = true
+		else:
+			attacker.puppet_has_hit = true
 		var move: MoveDefinition = candidate.move
 		var defender_was_attacking := defender.state == FighterSimulation.State.ATTACK
 		if candidate.blocked:
@@ -217,6 +258,8 @@ func _resolve_attacks(input_one: FrameInput, input_two: FrameInput) -> void:
 			events.append({"type": &"attack_blocked", "player": candidate.player, "move": move.id})
 		else:
 			defender.receive_hit(move, attacker.facing)
+			if move.id == &"xenon_laughing_chain":
+				defender.velocity.x = -attacker.facing * 5 * UNITS_PER_PIXEL
 			events.append({"type": &"hit_connected", "player": candidate.player, "move": move.id, "damage": move.damage})
 		_apply_character_mechanic(attacker, move, candidate.blocked, defender_was_attacking)
 		hitstop_frames = maxi(hitstop_frames, move.hitstop)
@@ -261,6 +304,33 @@ func _collect_attack_candidate(
 		"move": attacker.current_move,
 		"blocked": _is_blocking(defender, defender_input),
 		"player": player_number,
+		"source": &"move",
+	})
+
+
+func _collect_delayed_candidate(
+	candidates: Array[Dictionary],
+	attacker: FighterSimulation,
+	defender: FighterSimulation,
+	defender_input: FrameInput,
+	player_number: int,
+	source: StringName
+) -> void:
+	var effect_rect := attacker.recall_rect() if source == &"recall" else attacker.puppet_rect()
+	var already_hit := attacker.recall_has_hit if source == &"recall" else attacker.puppet_has_hit
+	if already_hit or not effect_rect.has_area() or not effect_rect.intersects(defender.body_rect()):
+		return
+	var action := &"recall_strike" if source == &"recall" else &"puppet_strike"
+	var move := _move_for(attacker, action)
+	if move == null:
+		return
+	candidates.append({
+		"attacker": attacker,
+		"defender": defender,
+		"move": move,
+		"blocked": _is_blocking(defender, defender_input),
+		"player": player_number,
+		"source": source,
 	})
 
 
@@ -269,6 +339,33 @@ func _is_blocking(fighter: FighterSimulation, input: FrameInput) -> bool:
 		return false
 	var holding_away := input.horizontal_axis() == -fighter.facing
 	return holding_away
+
+
+func _can_start_action(fighter: FighterSimulation, action: StringName) -> bool:
+	if fighter.character_id == &"xenon" and action == &"special_down":
+		return fighter.emotional_echo_tokens > 0 and fighter.puppet_delay_frames == 0 and fighter.puppet_active_frames == 0
+	return true
+
+
+func _can_cancel(move: MoveDefinition, action: StringName) -> bool:
+	var move_id := str(move.id)
+	var is_special := str(action).begins_with("special_")
+	if move_id.ends_with("_light"):
+		return action == &"medium" or is_special
+	if move_id.ends_with("_medium"):
+		return action == &"heavy" or is_special
+	if move_id.ends_with("_heavy"):
+		return is_special
+	return false
+
+
+func _prepare_action(fighter: FighterSimulation, action: StringName) -> void:
+	if fighter.character_id == &"izuna" and action == &"special_neutral" and fighter.consume_memory_mark_for_recall():
+		events.append({"type": &"character_mechanic_changed", "fighter": fighter.fighter_id, "mechanic": &"memory_mark", "value": 0})
+		events.append({"type": &"delayed_effect_started", "fighter": fighter.fighter_id, "effect": &"recall"})
+	elif fighter.character_id == &"xenon" and action == &"special_down" and fighter.consume_echo_for_puppet():
+		events.append({"type": &"character_mechanic_changed", "fighter": fighter.fighter_id, "mechanic": &"emotional_echo", "value": 0})
+		events.append({"type": &"delayed_effect_started", "fighter": fighter.fighter_id, "effect": &"puppet"})
 
 
 func _resolve_pushboxes() -> void:

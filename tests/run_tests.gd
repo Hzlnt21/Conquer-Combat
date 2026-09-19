@@ -20,6 +20,15 @@ func _init() -> void:
 	_test_knockdown_clears_character_mechanic()
 	_test_xenon_medium_block_grants_echo()
 	_test_character_mechanics_expire()
+	_test_izuna_special_selection()
+	_test_xenon_special_selection_and_puppet_requirement()
+	_test_recall_consumes_mark_and_hits_later()
+	_test_puppet_consumes_echo_and_hits_later()
+	_test_puppet_is_cancelled_when_xenon_is_hit()
+	_test_laughing_chain_pulls_on_hit()
+	_test_foxfire_step_moves_forward()
+	_test_izuna_basic_cancel_route()
+	_test_xenon_basic_cancel_route()
 
 	if failures == 0:
 		print("PASS: %d assertions" % assertions)
@@ -228,6 +237,208 @@ func _test_character_mechanics_expire() -> void:
 		xenon.tick_character_mechanic()
 	_expect(izuna.memory_mark_frames == 0, "Memory Mark expires after its duration")
 	_expect(xenon.emotional_echo_tokens == 0, "Emotional Echo token expires after its duration")
+
+
+func _test_izuna_special_selection() -> void:
+	var simulation := CombatSimulation.new()
+	var special := FrameInput.new()
+	special.special_pressed = true
+	simulation.tick(special, FrameInput.new())
+	_expect(simulation.player.current_move.id == &"izuna_recall_slash", "Neutral Special selects Recall Slash")
+
+	simulation.reset()
+	var forward_special := FrameInput.new()
+	forward_special.right = true
+	forward_special.special_pressed = true
+	simulation.tick(forward_special, FrameInput.new())
+	_expect(simulation.player.current_move.id == &"izuna_foxfire_step", "Forward Special selects Foxfire Step")
+
+	simulation.reset()
+	var down_special := FrameInput.new()
+	down_special.down = true
+	down_special.special_pressed = true
+	simulation.tick(down_special, FrameInput.new())
+	_expect(simulation.player.current_move.id == &"izuna_memory_break", "Down Special selects Memory Break")
+
+
+func _test_xenon_special_selection_and_puppet_requirement() -> void:
+	var simulation := CombatSimulation.new()
+	var neutral_special := FrameInput.new()
+	neutral_special.special_pressed = true
+	simulation.tick(FrameInput.new(), neutral_special)
+	_expect(simulation.dummy.current_move.id == &"xenon_laughing_chain", "Xenon Neutral Special selects Laughing Chain")
+
+	simulation.reset()
+	var forward_special := FrameInput.new()
+	forward_special.left = true
+	forward_special.special_pressed = true
+	simulation.tick(FrameInput.new(), forward_special)
+	_expect(simulation.dummy.current_move.id == &"xenon_mocking_step", "Xenon Forward Special selects Mocking Step")
+
+	simulation.reset()
+	var down_special := FrameInput.new()
+	down_special.down = true
+	down_special.special_pressed = true
+	simulation.tick(FrameInput.new(), down_special)
+	_expect(simulation.dummy.current_move == null, "Despair Puppet cannot start without Emotional Echo")
+
+	simulation.reset()
+	simulation.dummy.grant_emotional_echo()
+	simulation.tick(FrameInput.new(), down_special)
+	_expect(simulation.dummy.current_move.id == &"xenon_despair_puppet", "Emotional Echo enables Despair Puppet")
+	_expect(simulation.dummy.emotional_echo_tokens == 0, "Despair Puppet consumes Emotional Echo")
+
+
+func _test_recall_consumes_mark_and_hits_later() -> void:
+	var simulation := CombatSimulation.new()
+	simulation.player.position.x = 350 * CombatSimulation.UNITS_PER_PIXEL
+	simulation.dummy.position.x = 580 * CombatSimulation.UNITS_PER_PIXEL
+	simulation.player.apply_memory_mark()
+	var special := FrameInput.new()
+	special.special_pressed = true
+	simulation.tick(special, FrameInput.new())
+	_expect(simulation.player.memory_mark_frames == 0, "Recall Slash consumes Memory Mark")
+	_expect(simulation.dummy.health == 1000, "Recall delayed strike does not hit immediately")
+	for _index in range(FighterSimulation.RECALL_DELAY_FRAMES):
+		simulation.tick(FrameInput.new(), FrameInput.new())
+	_expect(simulation.dummy.health == 955, "Recall delayed strike deals its own damage")
+
+
+func _test_puppet_consumes_echo_and_hits_later() -> void:
+	var simulation := CombatSimulation.new()
+	simulation.player.position.x = 650 * CombatSimulation.UNITS_PER_PIXEL
+	simulation.dummy.position.x = 830 * CombatSimulation.UNITS_PER_PIXEL
+	simulation.dummy.grant_emotional_echo()
+	var special := FrameInput.new()
+	special.down = true
+	special.special_pressed = true
+	simulation.tick(FrameInput.new(), special)
+	_expect(simulation.player.health == 1000, "Despair Puppet does not hit during summon")
+	for _index in range(FighterSimulation.PUPPET_DELAY_FRAMES):
+		simulation.tick(FrameInput.new(), FrameInput.new())
+	_expect(simulation.player.health == 945, "Despair Puppet performs a delayed fixed strike")
+
+
+func _test_puppet_is_cancelled_when_xenon_is_hit() -> void:
+	var simulation := CombatSimulation.new()
+	simulation.player.position.x = 730 * CombatSimulation.UNITS_PER_PIXEL
+	simulation.dummy.position.x = 830 * CombatSimulation.UNITS_PER_PIXEL
+	simulation.dummy.grant_emotional_echo()
+	var puppet := FrameInput.new()
+	puppet.down = true
+	puppet.special_pressed = true
+	simulation.tick(FrameInput.new(), puppet)
+	var attack := FrameInput.new()
+	attack.light_pressed = true
+	simulation.tick(attack, FrameInput.new())
+	for _index in range(5):
+		simulation.tick(FrameInput.new(), FrameInput.new())
+	_expect(simulation.dummy.health == 960, "Izuna can interrupt Xenon's puppet setup")
+	_expect(simulation.dummy.puppet_delay_frames == 0, "Taking a hit removes pending Despair Puppet")
+
+
+func _test_laughing_chain_pulls_on_hit() -> void:
+	var simulation := CombatSimulation.new()
+	simulation.player.position.x = 650 * CombatSimulation.UNITS_PER_PIXEL
+	simulation.dummy.position.x = 830 * CombatSimulation.UNITS_PER_PIXEL
+	var special := FrameInput.new()
+	special.special_pressed = true
+	simulation.tick(FrameInput.new(), special)
+	for _index in range(14):
+		simulation.tick(FrameInput.new(), FrameInput.new())
+	_expect(simulation.player.health == 915, "Laughing Chain deals expected damage")
+	_expect(simulation.player.velocity.x > 0, "Laughing Chain pulls the opponent toward Xenon")
+
+
+func _test_foxfire_step_moves_forward() -> void:
+	var simulation := CombatSimulation.new()
+	var start_x := simulation.player.position.x
+	var special := FrameInput.new()
+	special.right = true
+	special.special_pressed = true
+	simulation.tick(special, FrameInput.new())
+	for _index in range(4):
+		simulation.tick(FrameInput.new(), FrameInput.new())
+	_expect(simulation.player.position.x > start_x, "Foxfire Step travels toward the opponent")
+
+
+func _test_izuna_basic_cancel_route() -> void:
+	var simulation := CombatSimulation.new()
+	simulation.player.position.x = 350 * CombatSimulation.UNITS_PER_PIXEL
+	simulation.dummy.position.x = 450 * CombatSimulation.UNITS_PER_PIXEL
+	var light := FrameInput.new()
+	light.light_pressed = true
+	simulation.tick(light, FrameInput.new())
+	for _index in range(5):
+		simulation.tick(FrameInput.new(), FrameInput.new())
+
+	var medium := FrameInput.new()
+	medium.medium_pressed = true
+	simulation.tick(medium, FrameInput.new())
+	for _index in range(4):
+		simulation.tick(FrameInput.new(), FrameInput.new())
+	simulation.tick(FrameInput.new(), FrameInput.new())
+	_expect(simulation.player.current_move.id == &"izuna_medium", "Izuna cancels Light into Medium")
+
+	for _index in range(9):
+		simulation.tick(FrameInput.new(), FrameInput.new())
+	var heavy := FrameInput.new()
+	heavy.heavy_pressed = true
+	simulation.tick(heavy, FrameInput.new())
+	for _index in range(6):
+		simulation.tick(FrameInput.new(), FrameInput.new())
+	simulation.tick(FrameInput.new(), FrameInput.new())
+	_expect(simulation.player.current_move.id == &"izuna_heavy", "Izuna cancels Medium into Heavy")
+
+	for _index in range(14):
+		simulation.tick(FrameInput.new(), FrameInput.new())
+	var special := FrameInput.new()
+	special.special_pressed = true
+	simulation.tick(special, FrameInput.new())
+	for _index in range(8):
+		simulation.tick(FrameInput.new(), FrameInput.new())
+	simulation.tick(FrameInput.new(), FrameInput.new())
+	_expect(simulation.player.current_move.id == &"izuna_recall_slash", "Izuna cancels Heavy into Recall Slash")
+	_expect(simulation.player.memory_mark_frames == 0, "Izuna route consumes its newly applied Memory Mark")
+
+
+func _test_xenon_basic_cancel_route() -> void:
+	var simulation := CombatSimulation.new()
+	simulation.player.position.x = 730 * CombatSimulation.UNITS_PER_PIXEL
+	simulation.dummy.position.x = 830 * CombatSimulation.UNITS_PER_PIXEL
+	var light := FrameInput.new()
+	light.light_pressed = true
+	simulation.tick(FrameInput.new(), light)
+	for _index in range(6):
+		simulation.tick(FrameInput.new(), FrameInput.new())
+
+	var medium := FrameInput.new()
+	medium.medium_pressed = true
+	simulation.tick(FrameInput.new(), medium)
+	for _index in range(4):
+		simulation.tick(FrameInput.new(), FrameInput.new())
+	simulation.tick(FrameInput.new(), FrameInput.new())
+	_expect(simulation.dummy.current_move.id == &"xenon_medium", "Xenon cancels Light into Medium")
+
+	for _index in range(10):
+		simulation.tick(FrameInput.new(), FrameInput.new())
+	var heavy := FrameInput.new()
+	heavy.heavy_pressed = true
+	simulation.tick(FrameInput.new(), heavy)
+	for _index in range(6):
+		simulation.tick(FrameInput.new(), FrameInput.new())
+	simulation.tick(FrameInput.new(), FrameInput.new())
+	_expect(simulation.dummy.current_move.id == &"xenon_heavy", "Xenon cancels Medium into Heavy")
+
+	for _index in range(16):
+		simulation.tick(FrameInput.new(), FrameInput.new())
+	var special := FrameInput.new()
+	special.special_pressed = true
+	simulation.tick(FrameInput.new(), special)
+	for _index in range(8):
+		simulation.tick(FrameInput.new(), FrameInput.new())
+	simulation.tick(FrameInput.new(), FrameInput.new())
+	_expect(simulation.dummy.current_move.id == &"xenon_laughing_chain", "Xenon cancels Heavy into Laughing Chain")
 
 
 func _expect(condition: bool, message: String) -> void:
