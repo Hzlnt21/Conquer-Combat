@@ -420,3 +420,13 @@ Milestone v0.1d implementation-complete. Throw escape tetap wajib sebelum public
 - Regression suite mencakup 106 assertions.
 
 Cinematic framing, final hit animation, combo scaling, dan final meter tuning masih provisional hingga animation dan playtest pass.
+
+### v0.6 application flow and deterministic CPU
+
+- `BasicCpuController` berada di application layer dan hanya menghasilkan `FrameInput`; simulation tetap menjadi sumber kebenaran combat.
+- RNG memakai seed tetap agar keputusan CPU dapat direproduksi dalam regression test.
+- Easy, Normal, dan Hard membedakan reaction interval, defense chance, serta kebijakan Burst tanpa membaca input masa depan pemain.
+- Title screen menyediakan Arcade Duel, Training, dan Local Versus.
+- Pause menghentikan simulation tick dan dapat kembali ke title tanpa memuat ulang project.
+- Arcade memakai CPU secara default; Local Versus meneruskan input keyboard atau controller kedua.
+- Regression suite mencakup 112 assertions.

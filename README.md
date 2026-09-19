@@ -2,11 +2,11 @@
 
 Prototype fighting game 2D untuk browser dan Windows, dibuat dengan Godot 4.6.3 Standard dan GDScript.
 
-Status saat ini: milestone v0.5a universal resource systems dan combat visual integration v01 telah berjalan di browser build.
+Status saat ini: milestone v0.6 application flow, deterministic CPU, universal resource systems, dan combat visual integration telah berjalan di browser build.
 
 Prototype saat ini memiliki:
 
-- Izuna versus Xenon placeholder untuk dua pemain.
+- Izuna versus Xenon dengan Arcade Duel melawan CPU, Training, dan Local Versus.
 - Walk, crouch, jump, forward dash, dan backdash.
 - Light, Medium, dan Heavy dengan startup, active, serta recovery frame.
 - Pushbox, hurtbox, hitbox, hitstop, hitstun, damage, dan health bar.
@@ -20,6 +20,8 @@ Prototype saat ini memiliki:
 - Keyboard dua pemain dan basic controller mapping.
 - Debug overlay serta reset dengan tombol `R`.
 - Web export dan headless regression tests.
+- Title screen, mode selection, pause menu, dan kembali ke title.
+- CPU deterministik dengan tingkat Easy, Normal, dan Hard.
 - Visual brief Izuna siap untuk concept exploration.
 - Canonical visual master Izuna telah disetujui dan dikunci.
 - Turnaround empat arah Izuna dan rencana bagian Skeleton2D telah tersedia.
@@ -45,6 +47,9 @@ Prototype saat ini memiliki:
 | Debug overlay | `F1` | `F1` | - |
 | Training reset | `F2` | `F2` | - |
 | Refill health/resources | `F3` | `F3` | - |
+| Toggle CPU/local (development) | `F4` | `F4` | - |
+| Ganti tingkat CPU | `F5` | `F5` | - |
+| Pause | `Esc` | `Esc` | - |
 
 Special dipilih dengan arah yang sedang ditahan: tanpa arah untuk Neutral Special, arah maju untuk Forward Special, dan bawah untuk Down Special. Normal block dilakukan dengan menahan arah menjauh dari lawan. Covenant Guard memiliki startup dan recovery, mengurangi blockstun serta pushback, tetapi tetap kalah terhadap Throw. Resource bersifat kontekstual: Conquer Art saat netral, Shift Cancel saat recovery, dan Burst ketika berada dalam hitstun atau blockstun.
 

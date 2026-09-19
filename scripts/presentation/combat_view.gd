@@ -8,6 +8,7 @@ const XENON_TEXTURE := preload("res://assets/characters/xenon/game-ready/xenon-c
 
 var simulation: CombatSimulation
 var show_debug := false
+var opponent_status := "CPU NORMAL"
 
 
 func _draw() -> void:
@@ -152,6 +153,7 @@ func _draw_health() -> void:
 	draw_string(ThemeDB.fallback_font, Vector2(54, 96), "THE SACRED EDGE", HORIZONTAL_ALIGNMENT_LEFT, 280, 12, Color("d7b5aa"))
 	draw_string(ThemeDB.fallback_font, Vector2(size.x - 304, 39), "XENON", HORIZONTAL_ALIGNMENT_RIGHT, 250, 22, Color("fff7ff"))
 	draw_string(ThemeDB.fallback_font, Vector2(size.x - 334, 96), "THE SMILING DESPAIR", HORIZONTAL_ALIGNMENT_RIGHT, 280, 12, Color("d5b1dc"))
+	draw_string(ThemeDB.fallback_font, Vector2(size.x - 154, 118), opponent_status, HORIZONTAL_ALIGNMENT_RIGHT, 100, 11, Color("ffe5a8"))
 
 	_draw_mechanic_bar(Rect2(54, 84, 180, 6), simulation.player.memory_mark_frames / float(FighterSimulation.MEMORY_MARK_DURATION), Color("ff6a55"), "MEMORY")
 	var echo_ratio := simulation.dummy.emotional_echo_frames / float(FighterSimulation.EMOTIONAL_ECHO_DURATION)

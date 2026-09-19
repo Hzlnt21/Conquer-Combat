@@ -41,6 +41,10 @@ func _init() -> void:
 	_test_burst_escapes_stun_once_per_round()
 	_test_ultimate_requires_and_consumes_full_meter()
 	_test_round_reset_restores_universal_resources()
+	_test_cpu_is_deterministic_for_the_same_seed()
+	_test_cpu_closes_distance_and_can_deal_damage()
+	_test_hard_cpu_uses_burst_under_pressure()
+	_test_cpu_is_neutral_outside_active_rounds()
 
 	if failures == 0:
 		print("PASS: %d assertions" % assertions)
@@ -669,6 +673,78 @@ func _test_round_reset_restores_universal_resources() -> void:
 	fighter.reset_for_round(Vector2i.ZERO)
 	_expect(fighter.conviction == 0, "Conviction resets between rounds")
 	_expect(fighter.burst_available, "Burst charge refreshes each round")
+
+
+func _test_cpu_is_deterministic_for_the_same_seed() -> void:
+	var simulation_a := CombatSimulation.new()
+	var simulation_b := CombatSimulation.new()
+	var cpu_a := BasicCpuController.new(BasicCpuController.Difficulty.NORMAL, 4242)
+	var cpu_b := BasicCpuController.new(BasicCpuController.Difficulty.NORMAL, 4242)
+	var trace_a: Array[String] = []
+	var trace_b: Array[String] = []
+	for _index in range(180):
+		var input_a := cpu_a.next_input(simulation_a, simulation_a.dummy, simulation_a.player)
+		var input_b := cpu_b.next_input(simulation_b, simulation_b.dummy, simulation_b.player)
+		trace_a.append(_input_signature(input_a))
+		trace_b.append(_input_signature(input_b))
+		simulation_a.tick(FrameInput.new(), input_a)
+		simulation_b.tick(FrameInput.new(), input_b)
+	_expect(trace_a == trace_b, "CPU produces the same decisions for the same seed")
+	_expect(simulation_a.dummy.position == simulation_b.dummy.position, "Seeded CPU produces deterministic simulation positions")
+
+
+func _test_cpu_closes_distance_and_can_deal_damage() -> void:
+	var simulation := CombatSimulation.new()
+	var cpu := BasicCpuController.new(BasicCpuController.Difficulty.NORMAL, 91)
+	var initial_distance := absi(simulation.dummy.position.x - simulation.player.position.x)
+	var closest_distance := initial_distance
+	var dealt_damage := false
+	for _index in range(900):
+		var cpu_input := cpu.next_input(simulation, simulation.dummy, simulation.player)
+		simulation.tick(FrameInput.new(), cpu_input)
+		closest_distance = mini(closest_distance, absi(simulation.dummy.position.x - simulation.player.position.x))
+		if simulation.player.health < 1000:
+			dealt_damage = true
+			break
+	_expect(closest_distance < initial_distance, "CPU closes distance when the opponent is far away")
+	_expect(dealt_damage, "CPU can engage and deal damage without reading player input")
+
+
+func _test_hard_cpu_uses_burst_under_pressure() -> void:
+	var simulation := CombatSimulation.new()
+	var cpu := BasicCpuController.new(BasicCpuController.Difficulty.HARD, 7)
+	simulation.dummy.health = 700
+	simulation.dummy.state = FighterSimulation.State.HITSTUN
+	simulation.dummy.state_frame = 20
+	var cpu_input := cpu.next_input(simulation, simulation.dummy, simulation.player)
+	_expect(cpu_input.resource_pressed, "Hard CPU requests Burst while stunned below its health threshold")
+
+
+func _test_cpu_is_neutral_outside_active_rounds() -> void:
+	var simulation := CombatSimulation.new()
+	var cpu := BasicCpuController.new(BasicCpuController.Difficulty.NORMAL, 7)
+	simulation.match_state = CombatSimulation.MatchState.ROUND_OVER
+	var cpu_input := cpu.next_input(simulation, simulation.dummy, simulation.player)
+	_expect(_input_signature(cpu_input) == "00000000000000", "CPU stays neutral outside an active round")
+
+
+func _input_signature(input: FrameInput) -> String:
+	return "%d%d%d%d%d%d%d%d%d%d%d%d%d%d" % [
+		int(input.left),
+		int(input.right),
+		int(input.up),
+		int(input.down),
+		int(input.dash_forward_pressed),
+		int(input.backdash_pressed),
+		int(input.guard_held),
+		int(input.light_pressed),
+		int(input.medium_pressed),
+		int(input.heavy_pressed),
+		int(input.special_pressed),
+		int(input.throw_pressed),
+		int(input.resource_pressed),
+		int(input.ultimate_pressed),
+	]
 
 
 func _expect(condition: bool, message: String) -> void:

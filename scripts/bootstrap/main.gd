@@ -1,10 +1,32 @@
 extends Control
 
+enum AppState {
+	TITLE,
+	PLAYING,
+	PAUSED,
+}
+
+enum GameMode {
+	ARCADE,
+	TRAINING,
+	LOCAL,
+}
+
 @onready var combat_view: CombatView = %CombatView
 @onready var phase_label: Label = %PhaseLabel
 @onready var header: Control = $Header
+@onready var title_screen: Control = %TitleScreen
+@onready var pause_screen: Control = %PauseScreen
+@onready var arcade_button: Button = %ArcadeButton
+@onready var training_button: Button = %TrainingButton
+@onready var local_button: Button = %LocalButton
+@onready var resume_button: Button = %ResumeButton
 
 var simulation := CombatSimulation.new()
+var cpu := BasicCpuController.new(BasicCpuController.Difficulty.NORMAL)
+var cpu_enabled := true
+var app_state := AppState.TITLE
+var game_mode := GameMode.ARCADE
 var help_frames_remaining := 360
 var previous_keys: Dictionary[int, bool] = {}
 var previous_joy_buttons: Dictionary[String, bool] = {}
@@ -18,13 +40,24 @@ var last_tap_frame := {
 
 func _ready() -> void:
 	combat_view.simulation = simulation
-	phase_label.text = "P1 J/K/L/I/U/O/P/[  |  P2 1-8  |  F1 DEBUG  |  F2 RESET  |  F3 REFILL"
-	print("Conquer Combat v0.5a universal resource systems loaded.")
+	arcade_button.pressed.connect(_start_arcade)
+	training_button.pressed.connect(_start_training)
+	local_button.pressed.connect(_start_local)
+	resume_button.pressed.connect(_resume_game)
+	%TitleButton.pressed.connect(_return_to_title)
+	title_screen.visible = true
+	pause_screen.visible = false
+	header.visible = false
+	arcade_button.grab_focus()
+	_update_mode_presentation()
+	print("Conquer Combat v0.6 application flow loaded.")
 
 
 func _physics_process(_delta: float) -> void:
+	if app_state != AppState.PLAYING:
+		return
 	var input_one := _capture_player_one()
-	var input_two := _capture_player_two()
+	var input_two := cpu.next_input(simulation, simulation.dummy, simulation.player) if cpu_enabled else _capture_player_two()
 	simulation.tick(input_one, input_two)
 	if help_frames_remaining > 0:
 		help_frames_remaining -= 1
@@ -37,8 +70,17 @@ func _physics_process(_delta: float) -> void:
 func _unhandled_key_input(event: InputEvent) -> void:
 	if event is not InputEventKey or not event.pressed or event.echo:
 		return
+	if event.keycode == KEY_ESCAPE:
+		if app_state == AppState.PLAYING:
+			_pause_game()
+		elif app_state == AppState.PAUSED:
+			_resume_game()
+		return
+	if app_state != AppState.PLAYING:
+		return
 	if event.keycode == KEY_R:
 		simulation.reset()
+		cpu.reset()
 	elif event.keycode == KEY_F1:
 		combat_view.show_debug = not combat_view.show_debug
 		combat_view.queue_redraw()
@@ -46,6 +88,77 @@ func _unhandled_key_input(event: InputEvent) -> void:
 		simulation.reset_training_positions()
 	elif event.keycode == KEY_F3:
 		simulation.refill_training_state()
+	elif event.keycode == KEY_F4:
+		cpu_enabled = not cpu_enabled
+		cpu.reset()
+		_update_mode_presentation()
+	elif event.keycode == KEY_F5:
+		cpu.difficulty = (cpu.difficulty + 1) % BasicCpuController.Difficulty.size()
+		cpu.reset()
+		_update_mode_presentation()
+
+
+func _start_arcade() -> void:
+	_start_game(GameMode.ARCADE)
+
+
+func _start_training() -> void:
+	_start_game(GameMode.TRAINING)
+
+
+func _start_local() -> void:
+	_start_game(GameMode.LOCAL)
+
+
+func _start_game(mode: GameMode) -> void:
+	game_mode = mode
+	app_state = AppState.PLAYING
+	cpu_enabled = mode == GameMode.ARCADE
+	simulation.reset()
+	if mode == GameMode.TRAINING:
+		simulation.refill_training_state()
+	cpu.reset()
+	title_screen.visible = false
+	pause_screen.visible = false
+	header.visible = true
+	help_frames_remaining = 360
+	header.modulate.a = 1.0
+	_update_mode_presentation()
+
+
+func _pause_game() -> void:
+	app_state = AppState.PAUSED
+	pause_screen.visible = true
+	resume_button.grab_focus()
+
+
+func _resume_game() -> void:
+	app_state = AppState.PLAYING
+	pause_screen.visible = false
+
+
+func _return_to_title() -> void:
+	app_state = AppState.TITLE
+	simulation.reset()
+	cpu.reset()
+	pause_screen.visible = false
+	title_screen.visible = true
+	header.visible = false
+	arcade_button.grab_focus()
+	combat_view.queue_redraw()
+
+
+func _update_mode_presentation() -> void:
+	if game_mode == GameMode.TRAINING:
+		combat_view.opponent_status = "TRAINING DUMMY"
+		phase_label.text = "TRAINING  |  F2 RESET POSITION  |  F3 REFILL  |  F1 FRAME DATA  |  ESC PAUSE"
+	elif cpu_enabled:
+		combat_view.opponent_status = "CPU %s" % cpu.difficulty_name().to_upper()
+		phase_label.text = "ARCADE DUEL  |  F5 CPU LEVEL  |  R RESTART  |  ESC PAUSE"
+	else:
+		combat_view.opponent_status = "LOCAL P2"
+		phase_label.text = "LOCAL VERSUS  |  P1 A/D + J-K-L-I  |  P2 ARROWS + 1-4  |  ESC PAUSE"
+	combat_view.queue_redraw()
 
 
 func _capture_player_one() -> FrameInput:
