@@ -1,7 +1,8 @@
-[gd_scene load_steps=3 format=3]
+[gd_scene load_steps=4 format=3]
 
 [ext_resource type="Script" path="res://scripts/bootstrap/main.gd" id="1_main"]
 [ext_resource type="Script" path="res://scripts/presentation/combat_view.gd" id="2_view"]
+[ext_resource type="Script" path="res://scripts/presentation/audio_director.gd" id="3_audio"]
 
 [node name="Main" type="Control"]
 layout_mode = 3
@@ -11,6 +12,10 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 script = ExtResource("1_main")
+
+[node name="AudioDirector" type="Node" parent="."]
+unique_name_in_owner = true
+script = ExtResource("3_audio")
 
 [node name="CombatView" type="Control" parent="."]
 unique_name_in_owner = true
@@ -52,6 +57,31 @@ theme_override_font_sizes/font_size = 11
 text = "v0.1a"
 horizontal_alignment = 1
 
+[node name="MatchBanner" type="Label" parent="."]
+unique_name_in_owner = true
+visible = false
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -500.0
+offset_top = -80.0
+offset_right = 500.0
+offset_bottom = 80.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_colors/font_color = Color(1, 0.87, 0.68, 1)
+theme_override_colors/font_shadow_color = Color(0.08, 0.01, 0.08, 0.9)
+theme_override_constants/shadow_offset_x = 4
+theme_override_constants/shadow_offset_y = 4
+theme_override_font_sizes/font_size = 34
+text = "MEMORY  VS  EMOTION\nTHE CONQUEST BEGINS"
+horizontal_alignment = 1
+vertical_alignment = 1
+mouse_filter = 2
+
 [node name="TitleScreen" type="Control" parent="."]
 unique_name_in_owner = true
 layout_mode = 1
@@ -79,9 +109,9 @@ anchor_top = 0.5
 anchor_right = 0.0
 anchor_bottom = 0.5
 offset_left = 72.0
-offset_top = -270.0
+offset_top = -300.0
 offset_right = 548.0
-offset_bottom = 270.0
+offset_bottom = 300.0
 grow_vertical = 2
 color = Color(0.035, 0.02, 0.06, 0.93)
 
@@ -164,9 +194,32 @@ unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 44)
 layout_mode = 2
 focus_neighbor_top = NodePath("../TrainingButton")
+focus_neighbor_bottom = NodePath("../HowToPlayButton")
 theme_override_colors/font_focus_color = Color(1, 0.82, 0.5, 1)
 theme_override_font_sizes/font_size = 16
 text = "LOCAL VERSUS"
+
+[node name="HowToPlayButton" type="Button" parent="TitleScreen/LeftPanel/Margin/Content"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 40)
+layout_mode = 2
+focus_neighbor_top = NodePath("../LocalButton")
+focus_neighbor_bottom = NodePath("../SettingsButton")
+theme_override_colors/font_color = Color(0.78, 0.72, 0.82, 1)
+theme_override_colors/font_focus_color = Color(1, 0.82, 0.5, 1)
+theme_override_font_sizes/font_size = 14
+text = "HOW TO PLAY"
+
+[node name="SettingsButton" type="Button" parent="TitleScreen/LeftPanel/Margin/Content"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 40)
+layout_mode = 2
+focus_neighbor_top = NodePath("../HowToPlayButton")
+focus_neighbor_bottom = NodePath("../ArcadeButton")
+theme_override_colors/font_color = Color(0.78, 0.72, 0.82, 1)
+theme_override_colors/font_focus_color = Color(1, 0.82, 0.5, 1)
+theme_override_font_sizes/font_size = 14
+text = "SETTINGS"
 
 [node name="Version" type="Label" parent="TitleScreen"]
 layout_mode = 1
@@ -183,7 +236,7 @@ grow_horizontal = 0
 grow_vertical = 0
 theme_override_colors/font_color = Color(0.72, 0.66, 0.76, 1)
 theme_override_font_sizes/font_size = 12
-text = "PORTFOLIO SLICE  v0.6"
+text = "PORTFOLIO SLICE  v1.0"
 horizontal_alignment = 2
 
 [node name="PauseScreen" type="Control" parent="."]
@@ -254,14 +307,571 @@ layout_mode = 2
 unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 48)
 layout_mode = 2
-focus_neighbor_bottom = NodePath("../TitleButton")
+focus_neighbor_bottom = NodePath("../PauseSettingsButton")
 theme_override_font_sizes/font_size = 17
 text = "RESUME"
+
+[node name="PauseSettingsButton" type="Button" parent="PauseScreen/Panel/Content"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 44)
+layout_mode = 2
+focus_neighbor_top = NodePath("../ResumeButton")
+focus_neighbor_bottom = NodePath("../TitleButton")
+theme_override_font_sizes/font_size = 15
+text = "SETTINGS"
 
 [node name="TitleButton" type="Button" parent="PauseScreen/Panel/Content"]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 44)
 layout_mode = 2
-focus_neighbor_top = NodePath("../ResumeButton")
+focus_neighbor_top = NodePath("../PauseSettingsButton")
 theme_override_font_sizes/font_size = 15
 text = "RETURN TO TITLE"
+
+[node name="TutorialScreen" type="Control" parent="."]
+unique_name_in_owner = true
+visible = false
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Shade" type="ColorRect" parent="TutorialScreen"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.018, 0.01, 0.03, 0.94)
+
+[node name="Panel" type="ColorRect" parent="TutorialScreen"]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -500.0
+offset_top = -292.0
+offset_right = 500.0
+offset_bottom = 292.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.045, 0.025, 0.065, 0.98)
+
+[node name="Content" type="VBoxContainer" parent="TutorialScreen/Panel"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 54.0
+offset_top = 34.0
+offset_right = -54.0
+offset_bottom = -30.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/separation = 10
+
+[node name="Title" type="Label" parent="TutorialScreen/Panel/Content"]
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.9, 0.76, 1)
+theme_override_font_sizes/font_size = 30
+text = "HOW TO PLAY"
+
+[node name="Subtitle" type="Label" parent="TutorialScreen/Panel/Content"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.91, 0.38, 0.52, 1)
+theme_override_font_sizes/font_size = 13
+text = "BREAK THEIR CONVICTION. PROTECT YOUR OWN."
+
+[node name="Rule" type="ColorRect" parent="TutorialScreen/Panel/Content"]
+custom_minimum_size = Vector2(0, 2)
+layout_mode = 2
+color = Color(0.67, 0.32, 0.53, 0.75)
+
+[node name="Columns" type="HBoxContainer" parent="TutorialScreen/Panel/Content"]
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_constants/separation = 54
+
+[node name="Controls" type="Label" parent="TutorialScreen/Panel/Content/Columns"]
+custom_minimum_size = Vector2(390, 0)
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_color = Color(0.86, 0.82, 0.88, 1)
+theme_override_font_sizes/font_size = 15
+text = "CONTROLS\n\nA / D / W / S     Move & jump\nJ     Light attack\nK     Medium attack\nL     Heavy attack\nI     Special\nU     Covenant Guard\nO     Throw / Throw Tech\nP     Conquer Art / Burst / Shift\n[      Ultimate\n\nHold away from the opponent to block.\nPress Throw as an enemy throw reaches you to tech."
+
+[node name="Systems" type="Label" parent="TutorialScreen/Panel/Content/Columns"]
+custom_minimum_size = Vector2(430, 0)
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_color = Color(0.86, 0.82, 0.88, 1)
+theme_override_font_sizes/font_size = 15
+text = "COMBAT SYSTEMS\n\nLIGHT > MEDIUM > HEAVY > SPECIAL\nBuild Conviction by fighting and advancing.\n\n1 BAR   Conquer Art or Shift Cancel\nBURST   Escape pressure once per round\n3 BARS  Ultimate Move\n\nIZUNA marks memories, then recalls them.\nXENON harvests emotion to summon despair."
+
+[node name="TutorialStartButton" type="Button" parent="TutorialScreen/Panel/Content"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 46)
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.9, 0.68, 1)
+theme_override_font_sizes/font_size = 16
+text = "START GUIDED TUTORIAL"
+
+[node name="TutorialBackButton" type="Button" parent="TutorialScreen/Panel/Content"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 42)
+layout_mode = 2
+theme_override_font_sizes/font_size = 16
+text = "BACK TO TITLE"
+
+[node name="SettingsScreen" type="Control" parent="."]
+unique_name_in_owner = true
+visible = false
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Shade" type="ColorRect" parent="SettingsScreen"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.018, 0.01, 0.03, 0.94)
+
+[node name="Panel" type="ColorRect" parent="SettingsScreen"]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -340.0
+offset_top = -325.0
+offset_right = 340.0
+offset_bottom = 325.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.045, 0.025, 0.065, 0.98)
+
+[node name="Content" type="VBoxContainer" parent="SettingsScreen/Panel"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 54.0
+offset_top = 40.0
+offset_right = -54.0
+offset_bottom = -38.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/separation = 18
+
+[node name="Title" type="Label" parent="SettingsScreen/Panel/Content"]
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.9, 0.76, 1)
+theme_override_font_sizes/font_size = 30
+text = "SETTINGS"
+
+[node name="Rule" type="ColorRect" parent="SettingsScreen/Panel/Content"]
+custom_minimum_size = Vector2(0, 2)
+layout_mode = 2
+color = Color(0.67, 0.32, 0.53, 0.75)
+
+[node name="VolumeLabel" type="Label" parent="SettingsScreen/Panel/Content"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.86, 0.82, 0.88, 1)
+theme_override_font_sizes/font_size = 16
+text = "MASTER VOLUME"
+
+[node name="VolumeSlider" type="HSlider" parent="SettingsScreen/Panel/Content"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 34)
+layout_mode = 2
+max_value = 100.0
+step = 1.0
+value = 78.0
+
+[node name="MusicToggle" type="CheckButton" parent="SettingsScreen/Panel/Content"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 42)
+layout_mode = 2
+button_pressed = true
+theme_override_font_sizes/font_size = 16
+text = "AMBIENT MUSIC"
+
+[node name="ScreenShakeToggle" type="CheckButton" parent="SettingsScreen/Panel/Content"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 44)
+layout_mode = 2
+button_pressed = true
+theme_override_font_sizes/font_size = 16
+text = "SCREEN SHAKE"
+
+[node name="ImpactFlashToggle" type="CheckButton" parent="SettingsScreen/Panel/Content"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 44)
+layout_mode = 2
+button_pressed = true
+theme_override_font_sizes/font_size = 16
+text = "IMPACT FLASH"
+
+[node name="Hint" type="Label" parent="SettingsScreen/Panel/Content"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.65, 0.6, 0.7, 1)
+theme_override_font_sizes/font_size = 12
+text = "Accessibility preferences are saved automatically."
+
+[node name="ControlsButton" type="Button" parent="SettingsScreen/Panel/Content"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 42)
+layout_mode = 2
+theme_override_colors/font_color = Color(0.92, 0.82, 0.68, 1)
+theme_override_font_sizes/font_size = 14
+text = "KEYBOARD CONTROLS"
+
+[node name="CreditsButton" type="Button" parent="SettingsScreen/Panel/Content"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 42)
+layout_mode = 2
+theme_override_colors/font_color = Color(0.78, 0.72, 0.82, 1)
+theme_override_font_sizes/font_size = 14
+text = "CREDITS & NOTICES"
+
+[node name="SettingsBackButton" type="Button" parent="SettingsScreen/Panel/Content"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 46)
+layout_mode = 2
+theme_override_font_sizes/font_size = 16
+text = "BACK"
+
+[node name="ResultScreen" type="Control" parent="."]
+unique_name_in_owner = true
+visible = false
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Shade" type="ColorRect" parent="ResultScreen"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.018, 0.008, 0.03, 0.84)
+
+[node name="Panel" type="ColorRect" parent="ResultScreen"]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -360.0
+offset_top = -200.0
+offset_right = 360.0
+offset_bottom = 200.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.05, 0.025, 0.07, 0.97)
+
+[node name="Accent" type="ColorRect" parent="ResultScreen/Panel"]
+layout_mode = 1
+anchors_preset = 10
+anchor_right = 1.0
+offset_bottom = 5.0
+grow_horizontal = 2
+color = Color(0.92, 0.28, 0.38, 1)
+
+[node name="Content" type="VBoxContainer" parent="ResultScreen/Panel"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 52.0
+offset_top = 48.0
+offset_right = -52.0
+offset_bottom = -42.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/separation = 18
+
+[node name="Eyebrow" type="Label" parent="ResultScreen/Panel/Content"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.91, 0.45, 0.56, 1)
+theme_override_font_sizes/font_size = 13
+text = "THE CONQUEST RESONATES"
+horizontal_alignment = 1
+
+[node name="ResultTitle" type="Label" parent="ResultScreen/Panel/Content"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.9, 0.7, 1)
+theme_override_font_sizes/font_size = 36
+text = "IZUNA CONQUERS"
+horizontal_alignment = 1
+
+[node name="ResultSubtitle" type="Label" parent="ResultScreen/Panel/Content"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.8, 0.75, 0.84, 1)
+theme_override_font_sizes/font_size = 15
+text = "Memory endures. Eidara keeps its choices."
+horizontal_alignment = 1
+
+[node name="Spacer" type="Control" parent="ResultScreen/Panel/Content"]
+custom_minimum_size = Vector2(0, 18)
+layout_mode = 2
+
+[node name="RematchButton" type="Button" parent="ResultScreen/Panel/Content"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 48)
+layout_mode = 2
+focus_neighbor_bottom = NodePath("../ResultTitleButton")
+theme_override_font_sizes/font_size = 17
+text = "REMATCH"
+
+[node name="ResultTitleButton" type="Button" parent="ResultScreen/Panel/Content"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 44)
+layout_mode = 2
+focus_neighbor_top = NodePath("../RematchButton")
+theme_override_font_sizes/font_size = 15
+text = "RETURN TO TITLE"
+
+[node name="CreditsScreen" type="Control" parent="."]
+unique_name_in_owner = true
+visible = false
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Shade" type="ColorRect" parent="CreditsScreen"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.018, 0.01, 0.03, 0.96)
+
+[node name="Panel" type="ColorRect" parent="CreditsScreen"]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -430.0
+offset_top = -280.0
+offset_right = 430.0
+offset_bottom = 280.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.045, 0.025, 0.065, 0.98)
+
+[node name="Content" type="VBoxContainer" parent="CreditsScreen/Panel"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 58.0
+offset_top = 40.0
+offset_right = -58.0
+offset_bottom = -36.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/separation = 12
+
+[node name="Title" type="Label" parent="CreditsScreen/Panel/Content"]
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.9, 0.76, 1)
+theme_override_font_sizes/font_size = 30
+text = "CREDITS & NOTICES"
+horizontal_alignment = 1
+
+[node name="Rule" type="ColorRect" parent="CreditsScreen/Panel/Content"]
+custom_minimum_size = Vector2(0, 2)
+layout_mode = 2
+color = Color(0.67, 0.32, 0.53, 0.75)
+
+[node name="Credits" type="Label" parent="CreditsScreen/Panel/Content"]
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_colors/font_color = Color(0.82, 0.78, 0.86, 1)
+theme_override_font_sizes/font_size = 14
+text = "CONQUER COMBAT\nCreated and directed by Hzlnt21\n\nGAME DESIGN, LORE & ART DIRECTION\nHzlnt21 with OpenAI creative collaboration\n\nENGINEERING & PRODUCTION\nBuilt in Godot Engine 4.6 with GDScript\n\nVISUAL ASSETS\nOriginal project artwork created under the director's approved concepts\nusing OpenAI image generation, then integrated and quality-checked in Godot\n\nAUDIO\nOriginal procedural PCM synthesis generated at runtime\n\nGodot Engine is licensed under the MIT License.\nNo third-party franchise characters or copyrighted game assets are distributed."
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="CreditsBackButton" type="Button" parent="CreditsScreen/Panel/Content"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 46)
+layout_mode = 2
+theme_override_font_sizes/font_size = 16
+text = "BACK TO SETTINGS"
+
+[node name="ControlsScreen" type="Control" parent="."]
+unique_name_in_owner = true
+visible = false
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Shade" type="ColorRect" parent="ControlsScreen"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.018, 0.01, 0.03, 0.96)
+
+[node name="Panel" type="ColorRect" parent="ControlsScreen"]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -390.0
+offset_top = -310.0
+offset_right = 390.0
+offset_bottom = 310.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.045, 0.025, 0.065, 0.98)
+
+[node name="Content" type="VBoxContainer" parent="ControlsScreen/Panel"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 52.0
+offset_top = 32.0
+offset_right = -52.0
+offset_bottom = -30.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/separation = 10
+
+[node name="Title" type="Label" parent="ControlsScreen/Panel/Content"]
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.9, 0.76, 1)
+theme_override_font_sizes/font_size = 28
+text = "PLAYER ONE CONTROLS"
+horizontal_alignment = 1
+
+[node name="Hint" type="Label" parent="ControlsScreen/Panel/Content"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.72, 0.66, 0.76, 1)
+theme_override_font_sizes/font_size = 12
+text = "Select a binding, then press a key. Conflicts are swapped automatically."
+horizontal_alignment = 1
+
+[node name="Rule" type="ColorRect" parent="ControlsScreen/Panel/Content"]
+custom_minimum_size = Vector2(0, 2)
+layout_mode = 2
+color = Color(0.67, 0.32, 0.53, 0.75)
+
+[node name="BindingsGrid" type="GridContainer" parent="ControlsScreen/Panel/Content"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_constants/h_separation = 18
+theme_override_constants/v_separation = 5
+columns = 4
+
+[node name="ResetBindingsButton" type="Button" parent="ControlsScreen/Panel/Content"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 40)
+layout_mode = 2
+theme_override_font_sizes/font_size = 14
+text = "RESTORE DEFAULTS"
+
+[node name="ControlsBackButton" type="Button" parent="ControlsScreen/Panel/Content"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 44)
+layout_mode = 2
+theme_override_font_sizes/font_size = 15
+text = "BACK TO SETTINGS"
+
+[node name="TutorialGuide" type="Control" parent="."]
+unique_name_in_owner = true
+visible = false
+layout_mode = 1
+anchors_preset = 10
+anchor_right = 1.0
+offset_left = 280.0
+offset_top = 126.0
+offset_right = -280.0
+offset_bottom = 226.0
+grow_horizontal = 2
+mouse_filter = 2
+
+[node name="Panel" type="ColorRect" parent="TutorialGuide"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.035, 0.018, 0.055, 0.94)
+mouse_filter = 2
+
+[node name="Accent" type="ColorRect" parent="TutorialGuide/Panel"]
+layout_mode = 1
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -5.0
+offset_bottom = 100.0
+grow_horizontal = 0
+color = Color(0.94, 0.3, 0.42, 1)
+
+[node name="Content" type="VBoxContainer" parent="TutorialGuide/Panel"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 28.0
+offset_top = 18.0
+offset_right = -28.0
+offset_bottom = -16.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/separation = 8
+
+[node name="TutorialStepTitle" type="Label" parent="TutorialGuide/Panel/Content"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.86, 0.64, 1)
+theme_override_font_sizes/font_size = 18
+text = "STEP 1 / 5  MOVEMENT"
+horizontal_alignment = 1
+
+[node name="TutorialStepBody" type="Label" parent="TutorialGuide/Panel/Content"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.88, 0.84, 0.9, 1)
+theme_override_font_sizes/font_size = 14
+text = "Move left and right for a moment."
+horizontal_alignment = 1

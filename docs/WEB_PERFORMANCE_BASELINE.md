@@ -26,10 +26,30 @@ The build was served through local HTTP and rendered successfully in portable Ch
 
 This is an initial engineering baseline, not the final shipping budget. Final optimization will re-check texture imports, unused-resource export, audio compression, cache headers, and release-template size after production assets are integrated.
 
+After v0.8 presentation and export filtering:
+
+| Item | Size |
+| --- | ---: |
+| Clean release payload | 45.45 MiB |
+| Godot WebAssembly runtime | 35.95 MiB |
+| Game package | 9.14 MiB |
+
+The runtime package now includes the stage, six production character key poses, UI flow, and procedural audio. Development concept boards, turnaround sheets, visual-proof scenes, tests, and `SOURCE/` are explicitly excluded. Chromium CDP verification confirmed `document.readyState=complete`, a live canvas, and the rendered title screen from the release package.
+
+Final v1.0 release:
+
+| Item | Size |
+| --- | ---: |
+| Clean release payload | 45.46 MiB |
+| Godot WebAssembly runtime | 35.95 MiB |
+| Game package | 9.16 MiB |
+
+The final build adds guided tutorial, persistent key remapping, procedural ambient music, credits, and release metadata without materially increasing the download. Automated 15-second boot captures confirmed a complete document, live canvas, and rendered title screen in portable Chromium 151, Microsoft Edge 153, and Mozilla Firefox 156. Chromium and Edge used CDP; Firefox used WebDriver BiDi.
+
 ## Release Gates
 
 - Web export completes without errors.
 - The page reaches a running Godot canvas through HTTP.
 - Core combat remains functional with cosmetic debug disabled.
-- Final portfolio deployment must be tested on current desktop Chrome, Edge, and Firefox.
+- Current desktop Chromium, Edge, and Firefox reach the live Godot title canvas.
 - Payload and first-load timing must be measured again before public v1.0.

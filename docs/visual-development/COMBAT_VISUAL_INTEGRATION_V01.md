@@ -11,6 +11,10 @@
 - `assets/stages/ruined-shrine/ruined-shrine-bg-v01.png`
 - `assets/characters/izuna/game-ready/izuna-combat-idle-v01.png`
 - `assets/characters/xenon/game-ready/xenon-combat-idle-v01.png`
+- `assets/characters/izuna/game-ready/izuna-combat-slash-v01.png`
+- `assets/characters/izuna/game-ready/izuna-combat-hurt-v01.png`
+- `assets/characters/xenon/game-ready/xenon-combat-slash-v01.png`
+- `assets/characters/xenon/game-ready/xenon-combat-hurt-v01.png`
 
 The Ruined Shrine concept was converted into a clean 16:9 battle backdrop without labels or board layout. Izuna and Xenon were produced as transparent full-body combat cutouts based on their approved visual references. Alpha-channel integrity was checked before Godot integration.
 
@@ -25,7 +29,7 @@ The presentation layer now:
 
 ## Production Boundary
 
-These cutouts establish composition, scale, palette, and browser presentation. They are not substitutes for the final animation package. Public v1.0 still requires authored or rigged movement, attack, block, hit, throw, knockdown, and KO animation states.
+These cutouts establish a stylized key-pose animation language for the portfolio vertical slice. Movement uses deterministic transforms and breathing motion; attack and hit states use authored key poses. A larger commercial roster would still require full frame-by-frame or rigged animation coverage.
 
 ## Generation Record
 
@@ -36,3 +40,7 @@ Stage prompt summary: transform the approved Ruined Shrine board into a clean ha
 Izuna prompt summary: preserve the approved costume, face, fox mask, sword, and palette while producing a transparent full-body screen-right combat idle cutout.
 
 Xenon prompt summary: preserve the approved jester silhouette, silver hair, chain-sickle, skull ornament, and magenta palette while matching Izuna's rendering quality in a transparent screen-left combat idle cutout.
+
+Attack prompt summary: preserve each approved identity and costume while creating a transparent low forward lunge, with Izuna slashing toward screen-right and Xenon sweeping his chain-sickle toward screen-left.
+
+Hit-reaction prompt summary: preserve each approved identity and equipment while creating a full-body grounded recoil opposite the incoming attack direction, without attacker, text, UI, shadow, or detached effects.

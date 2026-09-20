@@ -32,6 +32,7 @@ func _init() -> void:
 	_test_covenant_guard_startup_and_recovery()
 	_test_covenant_guard_reduces_blockstun_and_pushback()
 	_test_throw_defeats_block_and_causes_knockdown()
+	_test_throw_can_be_teched()
 	_test_throw_misses_airborne_opponent()
 	_test_throw_whiff_has_recovery()
 	_test_training_resets()
@@ -44,6 +45,8 @@ func _init() -> void:
 	_test_cpu_is_deterministic_for_the_same_seed()
 	_test_cpu_closes_distance_and_can_deal_damage()
 	_test_hard_cpu_uses_burst_under_pressure()
+	_test_hard_cpu_reads_and_techs_an_incoming_throw()
+	_test_cpu_match_reaches_a_deterministic_conclusion()
 	_test_cpu_is_neutral_outside_active_rounds()
 
 	if failures == 0:
@@ -522,6 +525,30 @@ func _test_throw_defeats_block_and_causes_knockdown() -> void:
 	_expect(simulation.dummy.state == FighterSimulation.State.KNOCKDOWN, "Throw causes soft knockdown")
 
 
+func _test_throw_can_be_teched() -> void:
+	var simulation := CombatSimulation.new()
+	simulation.player.position.x = 500 * CombatSimulation.UNITS_PER_PIXEL
+	simulation.dummy.position.x = 565 * CombatSimulation.UNITS_PER_PIXEL
+	var player_throw := FrameInput.new()
+	var dummy_throw := FrameInput.new()
+	player_throw.throw_pressed = true
+	dummy_throw.throw_pressed = true
+	simulation.tick(player_throw, dummy_throw)
+	for _index in range(6):
+		simulation.tick(FrameInput.new(), FrameInput.new())
+	var emitted_tech := false
+	for event in simulation.events:
+		if event.get("type", &"") == &"throw_teched":
+			emitted_tech = true
+	_expect(simulation.player.health == 1000 and simulation.dummy.health == 1000, "Throw Tech prevents throw damage")
+	_expect(simulation.player.state == FighterSimulation.State.THROW_TECH, "Thrower enters Throw Tech recovery")
+	_expect(simulation.dummy.state == FighterSimulation.State.THROW_TECH, "Defender enters Throw Tech recovery")
+	_expect(emitted_tech, "Throw Tech emits a presentation event")
+	for _index in range(FighterSimulation.THROW_TECH_RECOVERY_FRAMES + 7):
+		simulation.tick(FrameInput.new(), FrameInput.new())
+	_expect(simulation.player.state == FighterSimulation.State.IDLE and simulation.dummy.state == FighterSimulation.State.IDLE, "Throw Tech recovery returns both fighters to neutral")
+
+
 func _test_throw_misses_airborne_opponent() -> void:
 	var simulation := CombatSimulation.new()
 	simulation.player.position.x = 350 * CombatSimulation.UNITS_PER_PIXEL
@@ -718,6 +745,33 @@ func _test_hard_cpu_uses_burst_under_pressure() -> void:
 	simulation.dummy.state_frame = 20
 	var cpu_input := cpu.next_input(simulation, simulation.dummy, simulation.player)
 	_expect(cpu_input.resource_pressed, "Hard CPU requests Burst while stunned below its health threshold")
+
+
+func _test_hard_cpu_reads_and_techs_an_incoming_throw() -> void:
+	var simulation := CombatSimulation.new()
+	var cpu := BasicCpuController.new(BasicCpuController.Difficulty.HARD, 12)
+	simulation.player.position.x = 500 * CombatSimulation.UNITS_PER_PIXEL
+	simulation.dummy.position.x = 570 * CombatSimulation.UNITS_PER_PIXEL
+	var throw_input := FrameInput.new()
+	throw_input.throw_pressed = true
+	simulation.tick(throw_input, FrameInput.new())
+	var cpu_input := cpu.next_input(simulation, simulation.dummy, simulation.player)
+	_expect(cpu_input.throw_pressed, "Hard CPU attempts Throw Tech against a nearby telegraphed throw")
+
+
+func _test_cpu_match_reaches_a_deterministic_conclusion() -> void:
+	var simulation := CombatSimulation.new()
+	var izuna_cpu := BasicCpuController.new(BasicCpuController.Difficulty.NORMAL, 101)
+	var xenon_cpu := BasicCpuController.new(BasicCpuController.Difficulty.NORMAL, 202)
+	var elapsed_frames := 0
+	while simulation.match_state != CombatSimulation.MatchState.MATCH_OVER and elapsed_frames < 24000:
+		var player_input := izuna_cpu.next_input(simulation, simulation.player, simulation.dummy)
+		var dummy_input := xenon_cpu.next_input(simulation, simulation.dummy, simulation.player)
+		simulation.tick(player_input, dummy_input)
+		elapsed_frames += 1
+	_expect(simulation.match_state == CombatSimulation.MatchState.MATCH_OVER, "CPU-versus-CPU soak match reaches a conclusion")
+	_expect(simulation.player.rounds_won == 2 or simulation.dummy.rounds_won == 2, "Soak match produces a best-of-three winner")
+	_expect(elapsed_frames < 24000, "Soak match completes within the deterministic frame budget")
 
 
 func _test_cpu_is_neutral_outside_active_rounds() -> void:

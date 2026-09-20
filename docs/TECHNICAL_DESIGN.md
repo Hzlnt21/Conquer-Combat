@@ -405,7 +405,7 @@ Milestone v0.1c dianggap implementation-complete. Angka frame, jarak, damage, in
 - Headless regression suite mencakup 78 assertions.
 - Web release berhasil dirender melalui HTTP lokal di Chromium; baseline payload awal adalah 42.96 MiB.
 
-Milestone v0.1d implementation-complete. Throw escape tetap wajib sebelum public v1.0 sesuai GDD.
+Milestone v0.1d implementation-complete. Throw escape kemudian diselesaikan melalui buffered Throw Tech pada release pass.
 
 ### v0.5a universal resource systems
 
@@ -430,3 +430,29 @@ Cinematic framing, final hit animation, combo scaling, dan final meter tuning ma
 - Pause menghentikan simulation tick dan dapat kembali ke title tanpa memuat ulang project.
 - Arcade memakai CPU secara default; Local Versus meneruskan input keyboard atau controller kedua.
 - Regression suite mencakup 112 assertions.
+
+### v0.9 release gameplay closure
+
+- Throw Tech memakai input buffer 10 frame, tanpa damage atau meter gain, lalu mendorong kedua fighter ke recovery netral.
+- Simultaneous strike trade dan double KO tetap dipertahankan setelah resolusi Throw Tech ditambahkan.
+- Hard CPU merespons startup throw jarak dekat dengan tech; Normal memakai peluang respons yang lebih rendah.
+- Regression suite mencakup 118 assertions.
+
+### v0.8 presentation slice
+
+- Title, How to Play, Settings, Pause, match intro, result, rematch, dan return-to-title membentuk application loop lengkap.
+- Training menyediakan Stand, Guard, dan deterministic CPU dummy serta infinite timer/reset setelah KO.
+- `AudioDirector` membuat original PCM one-shot audio saat runtime dan merespons simulation events tanpa menambah external sound pack.
+- Presentation memakai idle, attack, dan hurt key pose per karakter dengan deterministic breathing, lunge, tint, screen shake, dan impact flash.
+- Accessibility settings untuk volume, screen shake, dan impact flash disimpan melalui `ConfigFile` di `user://settings.cfg`.
+- Release export mengecualikan development-only artwork, proof scene, tests, dan source references.
+
+### v1.0 professional portfolio vertical slice
+
+- Guided Tutorial mengajarkan movement, strike, cancel route, defense, dan Conquer Art melalui objective yang membaca input serta simulation events.
+- Player 1 keyboard bindings dapat diubah, conflict di-swap, dan konfigurasi disimpan di `user://settings.cfg`.
+- `AudioDirector` menambahkan original looping ambient score, music toggle, dan cleanup lifecycle selain event-driven SFX.
+- Throw Tech window dibersihkan saat hit, block, atau Burst agar input lama tidak terbawa ke state berikutnya.
+- Settings, controls, credits, third-party notices, result flow, dan release documentation menutup presentation loop.
+- Release regression suite mencakup 121 assertions dan deterministic best-of-three CPU soak match.
+- Web release terverifikasi boot sampai live Godot canvas di Chromium, Microsoft Edge, dan Mozilla Firefox.

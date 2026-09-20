@@ -5,21 +5,63 @@ const UNITS_PER_PIXEL := 1000.0
 const STAGE_TEXTURE := preload("res://assets/stages/ruined-shrine/ruined-shrine-bg-v01.png")
 const IZUNA_TEXTURE := preload("res://assets/characters/izuna/game-ready/izuna-combat-idle-v01.png")
 const XENON_TEXTURE := preload("res://assets/characters/xenon/game-ready/xenon-combat-idle-v01.png")
+const IZUNA_ATTACK_TEXTURE := preload("res://assets/characters/izuna/game-ready/izuna-combat-slash-v01.png")
+const XENON_ATTACK_TEXTURE := preload("res://assets/characters/xenon/game-ready/xenon-combat-slash-v01.png")
+const IZUNA_HURT_TEXTURE := preload("res://assets/characters/izuna/game-ready/izuna-combat-hurt-v01.png")
+const XENON_HURT_TEXTURE := preload("res://assets/characters/xenon/game-ready/xenon-combat-hurt-v01.png")
 
 var simulation: CombatSimulation
 var show_debug := false
 var opponent_status := "CPU NORMAL"
+var shake_frames := 0
+var shake_strength := 0.0
+var impact_flash_frames := 0
+var screen_shake_enabled := true
+var impact_flash_enabled := true
+
+
+func react_to_events(events: Array[Dictionary]) -> void:
+	for event in events:
+		match event.get("type", &""):
+			&"hit_connected":
+				shake_frames = 7 if screen_shake_enabled else 0
+				shake_strength = 7.0
+				impact_flash_frames = 3 if impact_flash_enabled else 0
+			&"burst_activated":
+				shake_frames = 12 if screen_shake_enabled else 0
+				shake_strength = 11.0
+				impact_flash_frames = 5 if impact_flash_enabled else 0
+			&"ultimate_started":
+				shake_frames = 18 if screen_shake_enabled else 0
+				shake_strength = 14.0
+				impact_flash_frames = 7 if impact_flash_enabled else 0
+			&"throw_teched":
+				shake_frames = 8 if screen_shake_enabled else 0
+				shake_strength = 8.0
+				impact_flash_frames = 3 if impact_flash_enabled else 0
+
+
+func tick_presentation() -> void:
+	shake_frames = maxi(0, shake_frames - 1)
+	impact_flash_frames = maxi(0, impact_flash_frames - 1)
 
 
 func _draw() -> void:
 	if simulation == null:
 		return
 
+	var shake := Vector2.ZERO
+	if shake_frames > 0:
+		shake = Vector2(sin(simulation.frame * 2.17), cos(simulation.frame * 1.73)) * shake_strength
+	draw_set_transform(shake)
 	_draw_stage()
 	_draw_fighter(simulation.player, Color("f2eee8"), Color("df334f"), "P1 IZUNA")
 	_draw_fighter(simulation.dummy, Color("d8d1df"), Color("a54cc8"), "P2 XENON")
+	draw_set_transform(Vector2.ZERO)
 	_draw_health()
 	_draw_match_status()
+	if impact_flash_frames > 0:
+		draw_rect(Rect2(Vector2.ZERO, size), Color(1.0, 0.86, 0.72, impact_flash_frames / 16.0))
 	if show_debug:
 		_draw_debug_text()
 
@@ -48,7 +90,10 @@ func _draw_fighter(fighter: FighterSimulation, body_color: Color, accent: Color,
 		var guard_color := Color("d9fbff") if fighter.state == FighterSimulation.State.GUARD else Color("64889d")
 		draw_arc(bottom + Vector2(fighter.facing * 24, -92), 56, -1.45, 1.45, 20, guard_color, 9)
 		draw_circle(bottom + Vector2(fighter.facing * 34, -92), 7, guard_color)
-	elif fighter.state == FighterSimulation.State.KNOCKDOWN:
+	elif fighter.state == FighterSimulation.State.THROW_TECH:
+		draw_arc(bottom + Vector2(0, -92), 62, 0, TAU, 24, Color("ffd68a"), 8)
+		draw_string(ThemeDB.fallback_font, bottom + Vector2(-50, -175), "THROW TECH", HORIZONTAL_ALIGNMENT_CENTER, 100, 13, Color("fff0c8"))
+	elif fighter.state in [FighterSimulation.State.KNOCKDOWN, FighterSimulation.State.KO]:
 		draw_line(bottom + Vector2(-48, -16), bottom + Vector2(48, -16), accent, 20)
 	_draw_delayed_effects(fighter, bottom)
 
@@ -75,8 +120,16 @@ func _draw_fighter_shadow(bottom: Vector2, accent: Color) -> void:
 
 func _draw_fighter_art(fighter: FighterSimulation, bottom: Vector2) -> void:
 	var is_izuna := fighter.character_id == &"izuna"
-	var texture: Texture2D = IZUNA_TEXTURE if is_izuna else XENON_TEXTURE
-	var art_height := 330.0 if is_izuna else 306.0
+	var attacking := fighter.state == FighterSimulation.State.ATTACK
+	var hurt := fighter.state in [FighterSimulation.State.HITSTUN, FighterSimulation.State.BLOCKSTUN, FighterSimulation.State.KNOCKDOWN, FighterSimulation.State.THROW_TECH, FighterSimulation.State.KO]
+	var texture: Texture2D
+	if attacking:
+		texture = IZUNA_ATTACK_TEXTURE if is_izuna else XENON_ATTACK_TEXTURE
+	elif hurt:
+		texture = IZUNA_HURT_TEXTURE if is_izuna else XENON_HURT_TEXTURE
+	else:
+		texture = IZUNA_TEXTURE if is_izuna else XENON_TEXTURE
+	var art_height := 280.0 if attacking else (310.0 if hurt else (330.0 if is_izuna else 306.0))
 	var art_width := art_height * texture.get_width() / float(texture.get_height())
 	var canonical_facing := 1 if is_izuna else -1
 	var flip := 1.0 if fighter.facing == canonical_facing else -1.0
@@ -85,11 +138,12 @@ func _draw_fighter_art(fighter: FighterSimulation, bottom: Vector2) -> void:
 	var pose_rotation := 0.0
 	var tint := Color.WHITE
 	if fighter.state == FighterSimulation.State.ATTACK:
-		pose_scale.x *= 1.035
+		var attack_progress := fighter.move_frame / float(maxi(1, fighter.current_move.total_frames()))
+		pose_scale.x *= 1.02 + sin(attack_progress * PI) * 0.045
 	elif fighter.state == FighterSimulation.State.HITSTUN:
 		pose_rotation = -fighter.facing * 0.08
 		tint = Color(1.0, 0.72, 0.72)
-	elif fighter.state == FighterSimulation.State.KNOCKDOWN:
+	elif fighter.state in [FighterSimulation.State.KNOCKDOWN, FighterSimulation.State.KO]:
 		pose_rotation = fighter.facing * 1.25
 		pose_scale *= 0.82
 	elif fighter.state == FighterSimulation.State.CROUCH:

@@ -16,6 +16,7 @@ enum State {
 	BLOCKSTUN,
 	HITSTUN,
 	KNOCKDOWN,
+	THROW_TECH,
 	KO,
 }
 
@@ -45,6 +46,9 @@ const CONVICTION_BAR := 1000
 const BURST_RECOVERY_FRAMES := 28
 const BURST_HITSTUN_FRAMES := 18
 const BURST_PUSHBACK := 14 * UNITS_PER_PIXEL
+const THROW_TECH_WINDOW_FRAMES := 10
+const THROW_TECH_RECOVERY_FRAMES := 18
+const THROW_TECH_PUSHBACK := 6 * UNITS_PER_PIXEL
 
 var fighter_id: StringName
 var character_id: StringName
@@ -78,6 +82,7 @@ var move_frame := 0
 var move_has_hit := false
 var buffered_attack: StringName
 var buffer_frames := 0
+var throw_tech_frames := 0
 
 
 func _init(id: StringName, start_position: Vector2i, character: StringName = &"izuna", dummy := false) -> void:
@@ -118,6 +123,7 @@ func receive_hit(move: MoveDefinition, attacker_facing: int) -> void:
 	move_frame = 0
 	buffered_attack = &""
 	buffer_frames = 0
+	throw_tech_frames = 0
 	state_frame = 0
 	state = State.KO if health == 0 else State.KNOCKDOWN if move.causes_knockdown else State.HITSTUN
 	if character_id == &"xenon":
@@ -136,6 +142,7 @@ func receive_block(move: MoveDefinition, attacker_facing: int, covenant_guard :=
 	move_frame = 0
 	buffered_attack = &""
 	buffer_frames = 0
+	throw_tech_frames = 0
 	state = State.BLOCKSTUN
 	var normal_blockstun := maxi(4, move.hitstun - 4)
 	state_frame = maxi(3, normal_blockstun / 2) if covenant_guard else normal_blockstun
@@ -147,8 +154,29 @@ func receive_burst(attacker_facing: int) -> void:
 	move_frame = 0
 	buffered_attack = &""
 	buffer_frames = 0
+	throw_tech_frames = 0
 	state = State.HITSTUN
 	state_frame = BURST_HITSTUN_FRAMES
+
+
+func open_throw_tech_window() -> void:
+	throw_tech_frames = THROW_TECH_WINDOW_FRAMES
+
+
+func tick_throw_tech_window() -> void:
+	throw_tech_frames = maxi(0, throw_tech_frames - 1)
+
+
+func apply_throw_tech(push_direction: int) -> void:
+	velocity.x = THROW_TECH_PUSHBACK * push_direction
+	current_move = null
+	move_frame = 0
+	move_has_hit = false
+	buffered_attack = &""
+	buffer_frames = 0
+	throw_tech_frames = 0
+	state = State.THROW_TECH
+	state_frame = THROW_TECH_RECOVERY_FRAMES
 
 
 func gain_conviction(amount: int) -> void:
@@ -173,6 +201,7 @@ func reset_for_round(start_position: Vector2i) -> void:
 	move_has_hit = false
 	buffered_attack = &""
 	buffer_frames = 0
+	throw_tech_frames = 0
 	conviction = 0
 	burst_available = true
 	clear_character_mechanic()

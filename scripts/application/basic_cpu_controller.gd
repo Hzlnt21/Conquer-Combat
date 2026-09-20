@@ -59,13 +59,24 @@ func next_input(simulation: CombatSimulation, fighter: FighterSimulation, oppone
 
 	if not fighter.can_start_attack():
 		return result
+	var distance := absi(opponent.position.x - fighter.position.x) / CombatSimulation.UNITS_PER_PIXEL
+	var incoming_throw := (
+		opponent.state == FighterSimulation.State.ATTACK
+		and opponent.current_move != null
+		and opponent.current_move.is_throw
+		and opponent.current_move.phase_at(opponent.move_frame) == &"startup"
+		and distance <= 110
+	)
+	var tech_chance := 0.2 if difficulty == Difficulty.EASY else 0.55
+	if incoming_throw and (difficulty == Difficulty.HARD or rng.randf() < tech_chance):
+		result.throw_pressed = true
+		return result
 
 	if decision_cooldown > 0:
 		decision_cooldown -= 1
 		return result
 
 	decision_cooldown = _reaction_frames()
-	var distance := absi(opponent.position.x - fighter.position.x) / CombatSimulation.UNITS_PER_PIXEL
 	var opponent_threatening := opponent.state == FighterSimulation.State.ATTACK and distance <= 260
 	if opponent_threatening and rng.randf() < _defense_chance():
 		guard_frames = 12 + difficulty * 4

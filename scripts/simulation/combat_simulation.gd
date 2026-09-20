@@ -90,6 +90,8 @@ func tick(input_one: FrameInput, input_two: FrameInput = null) -> void:
 	if hitstop_frames > 0:
 		hitstop_frames -= 1
 		return
+	player.tick_throw_tech_window()
+	dummy.tick_throw_tech_window()
 
 	_handle_resource_input(player, dummy, input_one)
 	_handle_resource_input(dummy, player, input_two)
@@ -138,6 +140,7 @@ func _capture_attack_input(fighter: FighterSimulation, input: FrameInput) -> voi
 	if input.ultimate_pressed:
 		fighter.queue_attack(&"ultimate")
 	elif input.throw_pressed:
+		fighter.open_throw_tech_window()
 		fighter.queue_attack(&"throw")
 	elif input.light_pressed:
 		fighter.queue_attack(&"light")
@@ -158,7 +161,7 @@ func _tick_fighter(fighter: FighterSimulation, input: FrameInput) -> void:
 	if fighter.state == FighterSimulation.State.KO:
 		return
 
-	if fighter.state in [FighterSimulation.State.HITSTUN, FighterSimulation.State.BLOCKSTUN]:
+	if fighter.state in [FighterSimulation.State.HITSTUN, FighterSimulation.State.BLOCKSTUN, FighterSimulation.State.THROW_TECH]:
 		fighter.state_frame -= 1
 		fighter.position.x += fighter.velocity.x
 		fighter.velocity.x = move_toward(fighter.velocity.x, 0, 800)
@@ -315,6 +318,9 @@ func _resolve_attacks(input_one: FrameInput, input_two: FrameInput) -> void:
 			continue
 		if source == &"puppet" and attacker.puppet_has_hit:
 			continue
+		var move: MoveDefinition = candidate.move
+		if source == &"move" and candidate.get("throw_tech", false) and (attacker.state != FighterSimulation.State.ATTACK or attacker.current_move != move):
+			continue
 
 		if source == &"move":
 			attacker.move_has_hit = true
@@ -322,7 +328,12 @@ func _resolve_attacks(input_one: FrameInput, input_two: FrameInput) -> void:
 			attacker.recall_has_hit = true
 		else:
 			attacker.puppet_has_hit = true
-		var move: MoveDefinition = candidate.move
+		if candidate.get("throw_tech", false):
+			attacker.apply_throw_tech(-attacker.facing)
+			defender.apply_throw_tech(attacker.facing)
+			events.append({"type": &"throw_teched", "player": candidate.player})
+			hitstop_frames = maxi(hitstop_frames, 6)
+			continue
 		var defender_was_attacking := defender.state == FighterSimulation.State.ATTACK
 		if candidate.blocked:
 			var covenant_guard := defender.state == FighterSimulation.State.GUARD
@@ -384,6 +395,7 @@ func _collect_attack_candidate(
 		"defender": defender,
 		"move": attacker.current_move,
 		"blocked": false if attacker.current_move.is_throw else _is_blocking(defender, defender_input),
+		"throw_tech": attacker.current_move.is_throw and defender.throw_tech_frames > 0,
 		"player": player_number,
 		"source": &"move",
 	})
